@@ -1,0 +1,11 @@
+{
+  "D_mm": 11460,
+  "H_mm": 19000,
+  "G": 1.0,
+  "CA_mm": 1.5,
+  "larguraChapa_mm": 1500,
+  "comprimentoChapa_mm": 6000,
+  "materialId": "A283-C",
+  "E": 0.85,
+  "custoAcoPorKg_R$": 6.5
+}

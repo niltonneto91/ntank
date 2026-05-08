@@ -1,0 +1,25 @@
+{
+  "name": "@ntank/calc-core",
+  "version": "0.1.0",
+  "description": "Núcleo de cálculo do NTANK — funções puras determinísticas para dimensionamento de tanques (API 650, NBR 7821)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "ntank-calc": "dist/cli.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "node --experimental-strip-types --no-warnings src/cli.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  },
+  "license": "UNLICENSED",
+  "author": "NTN Engenharia"
+}
