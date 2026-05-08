@@ -1200,6 +1200,63 @@ export function MemoriaPDF({
         <Rodape />
       </Page>
 
+      {/* ====================== AVISO TÉCNICO / DISCLAIMER ================= */}
+      <Page size="A4" style={styles.page}>
+        <View style={{ marginBottom: 24 }}>
+          <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 14, color: PRETO, marginBottom: 8 }}>
+            Aviso Técnico — Responsabilidade do Usuário
+          </Text>
+          <View style={{ borderBottomWidth: 2, borderBottomColor: VERDE, marginBottom: 16 }} />
+          <View
+            style={{
+              backgroundColor: "#FFF8E1",
+              borderLeftWidth: 4,
+              borderLeftColor: "#F59E0B",
+              padding: 16,
+              borderRadius: 2,
+              marginBottom: 16,
+            }}
+          >
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 11, color: "#92400E", marginBottom: 6 }}>
+              ⚠  Este documento tem caráter informativo e de suporte ao projeto.
+            </Text>
+            <Text style={{ fontSize: 10, color: "#78350F", lineHeight: 1.6 }}>
+              Os cálculos apresentados nesta memória foram elaborados com base nas normas técnicas
+              vigentes (API 650 — Welded Tanks for Oil Storage e ABNT NBR 7821 — Tanques soldados
+              para armazenamento de petróleo e derivados), utilizando os parâmetros inseridos pelo
+              usuário e os métodos implementados no software NTANK.
+            </Text>
+          </View>
+          <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.7, marginBottom: 12 }}>
+            Os resultados obtidos <Text style={{ fontFamily: "Helvetica-Bold" }}>devem obrigatoriamente ser verificados, validados e aprovados
+            por um Engenheiro Mecânico legalmente habilitado</Text>, devidamente registrado no
+            Conselho Regional de Engenharia e Agronomia (CREA), conforme determina a Lei Federal
+            n.º 5.194/1966 e as resoluções do CONFEA/CREA aplicáveis.
+          </Text>
+          <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.7, marginBottom: 12 }}>
+            A utilização deste documento como memória de cálculo definitiva, sem revisão técnica
+            por profissional habilitado, é de exclusiva responsabilidade do usuário. A NTN Engenharia
+            e os desenvolvedores do software NTANK não se responsabilizam por quaisquer danos,
+            perdas ou responsabilidades decorrentes do uso inadequado das informações aqui contidas.
+          </Text>
+          <Text style={{ fontSize: 10, color: "#374151", lineHeight: 1.7, marginBottom: 12 }}>
+            Antes da fabricação, montagem ou operação de qualquer equipamento, recomenda-se ainda:
+          </Text>
+          {[
+            "Verificar a edição vigente das normas referenciadas na data de execução do projeto;",
+            "Consultar o fabricante dos materiais quanto às propriedades mecânicas do lote utilizado;",
+            "Obter as aprovações e licenças exigidas pelos órgãos competentes (ANP, Corpo de Bombeiros, órgãos ambientais);",
+            "Emitir a ART (Anotação de Responsabilidade Técnica) correspondente ao serviço de projeto.",
+          ].map((item, i) => (
+            <View key={i} style={{ flexDirection: "row", marginBottom: 6 }}>
+              <Text style={{ fontSize: 10, color: VERDE, marginRight: 6, fontFamily: "Helvetica-Bold" }}>•</Text>
+              <Text style={{ fontSize: 10, color: "#374151", flex: 1, lineHeight: 1.6 }}>{item}</Text>
+            </View>
+          ))}
+        </View>
+        <Rodape />
+      </Page>
+
       {/* ======================= CTA — NTN ENGENHARIA ====================== */}
       <Page size="A4" style={styles.pageCapa}>
         <View style={styles.capaTopo} />

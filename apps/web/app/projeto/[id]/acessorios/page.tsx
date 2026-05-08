@@ -60,7 +60,7 @@ function EscadaHelicoidalCampos({
         step={1}
         min={5}
         max={50}
-        hint="Default NTN: 20°. Máximo prático: 50°."
+        hint="Default NTN: 38°. Máximo prático: 50°."
       />
       <NumberField
         label="Passo do pé (tread)"
@@ -143,7 +143,7 @@ export default function ProjetoAcessoriosPage({ params }: PageProps) {
             ? Number(projeto.geometria.H_m.toFixed(2))
             : Number((projeto.geometria.H_m / 2).toFixed(2)),
         largura_m: 1.0,
-        comprimento_m: undefined, // = perímetro
+        comprimento_m: 1.0,
         comGuardaCorpo: true,
       },
     ]);
@@ -232,7 +232,7 @@ export default function ProjetoAcessoriosPage({ params }: PageProps) {
 
         {escada.tipo === "helicoidal-externa" && (
           <EscadaHelicoidalCampos
-            angulo={escada.anguloHelicoidal_graus ?? 20}
+            angulo={escada.anguloHelicoidal_graus ?? 38}
             passoPe_mm={escada.passoPe_mm ?? 250}
             onChangeAngulo={(v) => setEscada("anguloHelicoidal_graus", v)}
             onChangePassoPe={(v) => setEscada("passoPe_mm", v)}

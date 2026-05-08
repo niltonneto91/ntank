@@ -16,8 +16,8 @@ export const FAIXAS_ESPESSURA_MINIMA: ReadonlyArray<FaixaEspessuraMinima> = [
   {
     D_min_m: 0,
     D_max_m: 15,
-    espessuraMinima_mm: 4.75,
-    descricao: "D < 15 m (3/16\")",
+    espessuraMinima_mm: 5,
+    descricao: "D < 15 m",
   },
   {
     D_min_m: 15,

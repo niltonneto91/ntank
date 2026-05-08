@@ -39,6 +39,7 @@ export default function NovoProjetoPage() {
   const [nome, setNome] = useState("");
   const [cliente, setCliente] = useState("");
   const [local, setLocal] = useState("");
+  const [pasta, setPasta] = useState("");
 
   // Modo A
   const [D_m, setD] = useState(7.64);
@@ -98,6 +99,7 @@ export default function NovoProjetoPage() {
       nome: nome || `Tanque D${num(geom.D_m, 2)} × H${num(geom.H_m, 2)}`,
       cliente: cliente || undefined,
       local: local || undefined,
+      pasta: pasta || undefined,
       geometria: {
         modo,
         D_m: geom.D_m,
@@ -155,6 +157,14 @@ export default function NovoProjetoPage() {
             value={local}
             onChange={setLocal}
             placeholder="Ex.: Sombrio/SC"
+          />
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <TextField
+            label="Pasta (opcional)"
+            value={pasta}
+            onChange={setPasta}
+            placeholder="Ex.: Tescan, Base Sombrio…"
           />
         </div>
       </Card>

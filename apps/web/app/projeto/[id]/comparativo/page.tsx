@@ -85,6 +85,21 @@ export default function ProjetoComparativoPage({ params }: PageProps) {
           (costado + fundo + teto). A variante destacada em verde é a
           recomendada — critério: <em>menor custo total de aço</em>.
         </p>
+        {(() => {
+          const vdp = comparativo.variantes.find((v) => v.metodo === "API 650 VDP");
+          const oneFoot = comparativo.variantes.find((v) => v.metodo === "API 650 1-Foot");
+          const iguais = vdp && oneFoot &&
+            Math.abs(vdp.resultado.pesoTotal_kg - oneFoot.resultado.pesoTotal_kg) < 0.5;
+          if (!iguais) return null;
+          return (
+            <p className="mt-2 text-xs text-carbono-500">
+              ℹ️ <strong>VDP = 1-Foot:</strong> resultado esperado quando o costado é
+              governado pela espessura mínima ou todos os anéis têm espessura uniforme
+              (comum em tanques pequenos com produto leve). O VDP traz benefício em
+              tanques maiores onde os anéis superiores são mais finos que os inferiores.
+            </p>
+          );
+        })()}
       </Card>
 
       <div className="grid gap-3 md:grid-cols-3">

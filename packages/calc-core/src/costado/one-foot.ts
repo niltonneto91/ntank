@@ -90,7 +90,12 @@ export function calcularCostadoOneFoot(
     const t_t = espessura1FootTeste(D_m, H_ef, material.St, E);
     const e_calc = Math.max(t_d, t_t);
     const e_aplicada = Math.max(e_calc, e_min_nominal);
-    const chapa = selecionarChapaComercial(e_aplicada, entrada.larguraChapa_mm);
+    // Quando o piso normativo de 5 mm governa (cálculo < 5 mm), a prática do
+    // setor aceita chapa 3/16" (4,75 mm) — não existe chapa comercial de 5 mm.
+    // Se o próprio cálculo estrutural exigir ≥ 5 mm, segue-se para 1/4" (6,35 mm).
+    const e_para_comercial =
+      e_min_nominal <= 5 && e_aplicada <= 5.0 ? 4.75 : e_aplicada;
+    const chapa = selecionarChapaComercial(e_para_comercial, entrada.larguraChapa_mm);
     espessuraMaxAdotada = Math.max(espessuraMaxAdotada, chapa.espessura);
 
     const peso_kg =

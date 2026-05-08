@@ -49,7 +49,17 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Suporte a safe-area-inset para iOS PWA (notch, home indicator)
+    function ({ addUtilities }: { addUtilities: (u: Record<string, Record<string, string>>) => void }) {
+      addUtilities({
+        ".pb-safe": { paddingBottom: "env(safe-area-inset-bottom, 0px)" },
+        ".pt-safe": { paddingTop: "env(safe-area-inset-top, 0px)" },
+        ".pl-safe": { paddingLeft: "env(safe-area-inset-left, 0px)" },
+        ".pr-safe": { paddingRight: "env(safe-area-inset-right, 0px)" },
+      });
+    },
+  ],
 };
 
 export default config;

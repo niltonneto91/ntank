@@ -179,7 +179,7 @@ export const ACESSORIOS_DEFAULT: AcessoriosProjeto = {
   escada: {
     tipo: "helicoidal-externa",
     largura_mm: 750,
-    anguloHelicoidal_graus: 20,
+    anguloHelicoidal_graus: 38,
     passoPe_mm: 250,
   },
   plataformas: [],
@@ -201,6 +201,8 @@ export interface ProjetoNTANK {
   cliente?: string;
   /** Localidade da obra (opcional). */
   local?: string;
+  /** Pasta / agrupador (ex.: "Tescan", "Base Sombrio"). */
+  pasta?: string;
   /** Responsável técnico (assinatura no PDF). */
   responsavelTecnico?: string;
   /** ISO datetime da criação. */
@@ -243,6 +245,7 @@ export function criarProjeto(parcial?: Partial<ProjetoNTANK>): ProjetoNTANK {
     nome: parcial?.nome?.trim() || "Projeto sem nome",
     cliente: parcial?.cliente,
     local: parcial?.local,
+    pasta: parcial?.pasta,
     criadoEm: agora,
     atualizadoEm: agora,
     geometria: parcial?.geometria ?? {

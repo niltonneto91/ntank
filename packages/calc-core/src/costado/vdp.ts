@@ -145,7 +145,10 @@ export function calcularCostadoVDP(entrada: EntradaCostado): ResultadoCostadoVDP
     const t_t = t_t_atual[i]!;
     const e_calc = Math.max(t_d, t_t);
     const e_aplicada = Math.max(e_calc, e_min_nominal);
-    const chapa = selecionarChapaComercial(e_aplicada, entrada.larguraChapa_mm);
+    // Piso normativo de 5 mm: aceita 3/16" (4,75 mm) quando cálculo < 5 mm.
+    const e_para_comercial =
+      e_min_nominal <= 5 && e_aplicada <= 5.0 ? 4.75 : e_aplicada;
+    const chapa = selecionarChapaComercial(e_para_comercial, entrada.larguraChapa_mm);
 
     const peso_kg =
       chapa.pesoPorM2 * larguraChapa_m * comprimentoChapa_m * chapasPorAnel;

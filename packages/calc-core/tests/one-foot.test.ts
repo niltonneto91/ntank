@@ -80,11 +80,10 @@ describe("API 650 1-Foot — costado completo", () => {
       comprimentoChapa_mm: 6000,
     };
     const r = calcularCostadoOneFoot(entrada);
-    const e_min = espessuraMinimaNominal(5);  // = 5 mm
-    // Como CA=0 e tanque pequeno, e_calc deve ser bem baixo, mas a chapa adotada
-    // tem que ter espessura ≥ e_min_nominal (5 mm → chapa 1/4" = 6,35 mm).
+    // Para D < 15 m e cálculo < 5 mm, a prática aceita 3/16" (4,75 mm)
+    // em vez de saltar para 1/4" (6,35 mm). O mínimo da chapa adotada é 4,75 mm.
     for (const anel of r.aneis) {
-      expect(anel.chapaComercial.espessura).toBeGreaterThanOrEqual(e_min - 0.01);
+      expect(anel.chapaComercial.espessura).toBeGreaterThanOrEqual(4.75 - 0.01);
     }
   });
 

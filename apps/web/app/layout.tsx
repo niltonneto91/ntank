@@ -67,8 +67,8 @@ export default function RootLayout({
       <body className="min-h-screen bg-creme text-carbono">
         <RegistrarSW />
         <Header />
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">{children}</main>
-        <footer className="mx-auto max-w-6xl px-4 py-6 text-xs text-carbono-500">
+        <main className="mx-auto max-w-6xl px-4 py-6 pb-safe sm:py-10">{children}</main>
+        <footer className="mx-auto max-w-6xl px-4 py-6 pb-safe text-xs text-carbono-500">
           Powered by{" "}
           <a
             href="https://www.ntnengenharia.com.br"
