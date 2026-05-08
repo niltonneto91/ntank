@@ -185,6 +185,12 @@ export interface EntradaTeto {
    * Default 30 kg/m² (vigas radiais + anel central + colunas leves).
    */
   readonly pesoEstruturaPorM2_kg?: number;
+  /**
+   * Espessura adotada da primeira camada do costado (mm), usada para
+   * calcular o diâmetro externo do teto (D_teto = D + 2 × e_costado).
+   * Opcional — se ausente, usa-se D nominal.
+   */
+  readonly e_costado_base_mm?: number;
 }
 
 export interface DetalheEstruturaTeto {

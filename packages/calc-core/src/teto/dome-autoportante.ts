@@ -33,7 +33,9 @@ export function calcularTetoDomeAutoportante(
   }
 
   const D_m = entrada.D_mm / 1000;
-  const R_dome_m = entrada.R_dome_m ?? D_m; // default: R = D
+  // D_teto = diâmetro externo do teto (assenta na face externa do costado)
+  const D_teto_m = D_m + 2 * ((entrada.e_costado_base_mm ?? 0) / 1000);
+  const R_dome_m = entrada.R_dome_m ?? D_m; // default: R = D (baseado em D nominal)
 
   if (R_dome_m < 0.8 * D_m || R_dome_m > 1.2 * D_m) {
     throw new Error(
@@ -51,8 +53,8 @@ export function calcularTetoDomeAutoportante(
   const e_calc = Math.max(E_TETO_MIN_NOMINAL_MM, e_estrutural) + entrada.CA_mm;
   const chapa = selecionarChapaComercial(e_calc);
 
-  // Calota esférica
-  const r_tanque = D_m / 2;
+  // Calota esférica — usa D_teto (diâmetro externo) para área real
+  const r_tanque = D_teto_m / 2;
   const h_calota = R_dome_m - Math.sqrt(R_dome_m * R_dome_m - r_tanque * r_tanque);
   const area_m2 = 2 * Math.PI * R_dome_m * h_calota;
   const peso_chapa = area_m2 * (chapa.espessura / 1000) * DENSIDADE_ACO_CARBONO;
@@ -74,6 +76,7 @@ export function calcularTetoDomeAutoportante(
       formula: "t = max(5, R_dome / 1,776) + CA",
       parametros: {
         D_m,
+        D_teto_m: Number(D_teto_m.toFixed(4)),
         R_dome_m,
         h_calota_m: Number(h_calota.toFixed(4)),
         area_m2: Number(area_m2.toFixed(3)),

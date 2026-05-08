@@ -93,13 +93,16 @@ export function calcularTetoConicoSuportado(
   }
 
   const D_m = entrada.D_mm / 1000;
+  // D_teto = diâmetro externo do teto (assenta na face externa do costado)
+  const D_teto_m = D_m + 2 * ((entrada.e_costado_base_mm ?? 0) / 1000);
   const angulo_rad = (angulo_graus * Math.PI) / 180;
   const cosTheta = Math.cos(angulo_rad);
 
   const e_calc = E_CHAPA_MIN_NOMINAL_MM + entrada.CA_mm;
   const chapa = selecionarChapaComercial(e_calc);
 
-  const area_m2 = (Math.PI * D_m * D_m) / (4 * cosTheta);
+  // Área usa D_teto (diâmetro externo) para massa correta
+  const area_m2 = (Math.PI * D_teto_m * D_teto_m) / (4 * cosTheta);
   const peso_chapa = area_m2 * (chapa.espessura / 1000) * DENSIDADE_ACO_CARBONO;
 
   // ============================================================
@@ -197,6 +200,7 @@ export function calcularTetoConicoSuportado(
           : "t_chapa = 5 + CA;  M_estrutura = vigas + anel + colunas + 8% conexões",
       parametros: {
         D_m,
+        D_teto_m: Number(D_teto_m.toFixed(4)),
         angulo_graus,
         CA_mm: entrada.CA_mm,
         area_m2: Number(area_m2.toFixed(3)),

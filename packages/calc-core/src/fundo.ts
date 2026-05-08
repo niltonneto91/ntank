@@ -44,11 +44,20 @@ export function calcularFundo(entrada: EntradaFundo): ResultadoFundo {
   const CA = entrada.CA_mm;
 
   // -------------------------------------------------------------------
+  // Diâmetro real do fundo
+  // D_fundo = D_nominal + 2 × e_1º_anel + 100 mm (overhang perimetral)
+  // Ref.: API 650, 5.4 — chapa de fundo prolonga-se 50 mm além do costado.
+  // -------------------------------------------------------------------
+  const e_costado_base =
+    entrada.e_costado_base_mm ?? estimarECostadoBase(D_m, CA, entrada.G ?? 1);
+  const D_fundo_m = D_m + 2 * (e_costado_base / 1000) + 0.100;
+
+  // -------------------------------------------------------------------
   // Corpo do fundo
   // -------------------------------------------------------------------
   const e_calc = E_FUNDO_MIN_NOMINAL_MM + CA;
   const chapaCorpo = selecionarChapaComercial(e_calc);
-  const area_m2 = (Math.PI * D_m * D_m) / 4;
+  const area_m2 = (Math.PI * D_fundo_m * D_fundo_m) / 4;
   const peso_corpo_kg =
     area_m2 * (chapaCorpo.espessura / 1000) * DENSIDADE_ACO_CARBONO;
 
@@ -59,11 +68,15 @@ export function calcularFundo(entrada: EntradaFundo): ResultadoFundo {
     formula: "e_fundo = e_min_nominal + CA",
     parametros: {
       D_m,
+      D_fundo_m: Number(D_fundo_m.toFixed(4)),
+      e_costado_base_mm: Number(e_costado_base.toFixed(2)),
       e_min_nominal_mm: E_FUNDO_MIN_NOMINAL_MM,
       CA_mm: CA,
       tipo: entrada.tipo,
     },
-    substituicao: `e_fundo = ${E_FUNDO_MIN_NOMINAL_MM} + ${CA} = ${e_calc.toFixed(2)} mm`,
+    substituicao:
+      `D_fundo = ${D_m.toFixed(3)} + 2×${(e_costado_base / 1000).toFixed(4)} + 0,100 = ${D_fundo_m.toFixed(4)} m; ` +
+      `e_fundo = ${E_FUNDO_MIN_NOMINAL_MM} + ${CA} = ${e_calc.toFixed(2)} mm`,
     resultado: { valor: e_calc, unidade: "mm" },
     espessuraAdotada: {
       valor: chapaCorpo.espessura,
@@ -75,8 +88,6 @@ export function calcularFundo(entrada: EntradaFundo): ResultadoFundo {
   // -------------------------------------------------------------------
   // Anel anular
   // -------------------------------------------------------------------
-  const e_costado_base =
-    entrada.e_costado_base_mm ?? estimarECostadoBase(D_m, CA, entrada.G ?? 1);
   const exigeAnelAnular =
     entrada.tipo === "plano-com-anel-anular" &&
     (D_m >= D_LIMITE_ANEL_ANULAR_M ||
@@ -92,7 +103,7 @@ export function calcularFundo(entrada: EntradaFundo): ResultadoFundo {
     );
     const chapaAnel = selecionarChapaComercial(e_anel_calc);
 
-    const r_externo = D_m / 2;
+    const r_externo = D_fundo_m / 2;
     const r_interno = r_externo - largura / 1000;
     const area_anel_m2 = Math.PI * (r_externo * r_externo - r_interno * r_interno);
     const peso_anel_kg =

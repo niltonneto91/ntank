@@ -75,6 +75,7 @@ export function calcularTanqueCompleto(
   const fundo = calcularFundo(fundoEntrada);
 
   // 3. Teto — CA do teto pode ser overridado (default = CA do costado).
+  //    e_costado_base_mm → usado para calcular D_teto = D + 2 × e_costado.
   const tetoEntrada: EntradaTeto = {
     D_mm: entrada.costado.D_mm,
     CA_mm: entrada.teto.CA_mm ?? entrada.costado.CA_mm,
@@ -82,6 +83,9 @@ export function calcularTanqueCompleto(
     anguloCone_graus: entrada.teto.anguloCone_graus,
     R_dome_m: entrada.teto.R_dome_m,
     pesoEstruturaPorM2_kg: entrada.teto.pesoEstruturaPorM2_kg,
+    e_costado_base_mm:
+      entrada.teto.e_costado_base_mm ??
+      costado.aneis[0]?.chapaComercial.espessura,
   };
   const teto = calcularTeto(tetoEntrada);
 

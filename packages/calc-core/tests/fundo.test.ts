@@ -15,13 +15,19 @@ describe("calcularFundo — corpo do fundo", () => {
     expect(r.chapaComercial.polegada).toBe("5/16");
   });
 
-  it("calcula área projetada correta", () => {
+  it("calcula área com D_fundo = D + 2×e_costado + 100mm", () => {
+    // D_fundo = D_nominal + 2×e_1º_anel + 100mm overhang (API 650, 5.4)
+    const e_costado = 8; // mm — chapa comercial 5/16"
     const r = calcularFundo({
-      D_mm: 10000, // D = 10 m
+      D_mm: 10000, // D nominal = 10 m
       CA_mm: 1.5,
       tipo: "plano-com-anel-anular",
+      e_costado_base_mm: e_costado,
     });
-    expect(r.area_m2).toBeCloseTo((Math.PI * 100) / 4, 4); // ≈ 78.54
+    const D_fundo = 10 + 2 * (e_costado / 1000) + 0.100; // 10.116 m
+    expect(r.area_m2).toBeCloseTo((Math.PI * D_fundo * D_fundo) / 4, 4);
+    // área deve ser maior que o nominal π×D²/4 = 78.54 m²
+    expect(r.area_m2).toBeGreaterThan((Math.PI * 100) / 4);
   });
 
   it("massa do corpo = área × espessura × densidade", () => {
