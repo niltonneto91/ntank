@@ -45,7 +45,15 @@
       "Bash(vercel --version)",
       "Bash(gh --version)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(sudo npm install -g vercel)",
+      "Bash(npm config *)",
+      "Bash(ls -la /usr/local/lib/ | head -5 && ls -la /usr/local/bin/node 2>/dev/null)",
+      "Bash(export PATH=\"$HOME/.npm-global/bin:$PATH\")",
+      "Bash(git commit -m 'chore: add vercel.json for monorepo deployment *)",
+      "Bash(git commit -m 'fix: simplify vercel.json — remove installCommand conflict *)",
+      "Bash(git commit -m 'chore: add Vercel gitignore and update local settings *)"
     ]
   }
 }
