@@ -53,10 +53,17 @@ export { calcularRespiroNormal } from "./respiro-normal.js";
 export { verificarDispositivo } from "./verificacao-dispositivo.js";
 
 // Área molhada
-export {
-  calcularAreaMolhadaVertical,
-} from "./area-molhada.js";
+export { calcularAreaMolhadaVertical } from "./area-molhada.js";
+export type { EntradaAreaMolhada, ResultadoAreaMolhada } from "./area-molhada.js";
+
+// Efeito térmico normal
+export { calcularTermico } from "./termico.js";
+export type { EntradaTermico, ResultadoTermico } from "./termico.js";
+
+// Ventilação de emergência por fogo
+export { calcularEmergenciaFogo } from "./emergencia-fogo.js";
 export type {
-  EntradaAreaMolhada,
-  ResultadoAreaMolhada,
-} from "./area-molhada.js";
+  EntradaEmergenciaFogo,
+  ModoEntradaEmergencia,
+  ResultadoEmergenciaFogo,
+} from "./emergencia-fogo.js";

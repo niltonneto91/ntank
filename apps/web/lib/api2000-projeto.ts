@@ -10,6 +10,7 @@
 import type {
   ClasseLiquidoAPI2000,
   DispositivoAlivioAPI2000,
+  ModoEntradaEmergencia,
   TipoTanqueAPI2000,
 } from "@ntank/calc-core";
 
@@ -19,151 +20,174 @@ import type {
 
 export type NormaContrucao = "API650" | "API620" | "NBR7821" | "UL142" | "outro";
 
+// Re-exportar para uso nos componentes
+export type { DispositivoAlivioAPI2000, ClasseLiquidoAPI2000, TipoTanqueAPI2000 };
+
 // ---------------------------------------------------------------------------
 // Estrutura principal
 // ---------------------------------------------------------------------------
 
 export interface ProjetoAPI2000 {
-  /** UUID v4 gerado na criação */
   id: string;
-  /** Discriminador de tipo — sempre "API2000" */
   tipo: "API2000";
-  /** Nome do cálculo / projeto */
   nome: string;
-  /** Cliente ou unidade (opcional) */
   cliente?: string;
-  /** Localidade (opcional) */
   local?: string;
-  /** Pasta organizacional (opcional) */
   pasta?: string;
-  /** ISO 8601 — data de criação */
   criadoEm: string;
-  /** ISO 8601 — última atualização (atualizado automaticamente ao salvar) */
   atualizadoEm: string;
 
-  // --- Identificação do tanque ---
-  /** Tag do equipamento no fluxograma / P&ID */
   tagTanque: string;
-  /** Norma de construção do tanque */
   normaContrucao: NormaContrucao;
-  /** Tipo de tanque — define a geometria e as regras de escopo */
   tipoTanque: TipoTanqueAPI2000;
 
-  // --- Geometria ---
   geometria: GeometriaAPI2000;
-
-  // --- Produto armazenado ---
   produto: ProdutoAPI2000;
-
-  // --- Pressões de projeto ---
   pressoes: PressoesAPI2000;
-
-  // --- Operação ---
   operacao: OperacaoAPI2000;
-
-  /**
-   * Fatores normativos da API 2000 Tabela 1.
-   * null = placeholder — usuário não preencheu da norma ainda.
-   * O sistema calcula o mínimo físico quando null.
-   */
   fatoresNormativos: FatoresNormativosAPI2000;
+
+  /** Configuração do efeito térmico normal */
+  termico: TermicoAPI2000;
+
+  /** Configuração da ventilação de emergência por fogo */
+  emergencia: EmergenciaAPI2000;
 
   /** Lista de dispositivos de alívio cadastrados */
   dispositivos: DispositivoAlivioAPI2000[];
 }
 
+// ---------------------------------------------------------------------------
+// Sub-estruturas
+// ---------------------------------------------------------------------------
+
 export interface GeometriaAPI2000 {
-  /** Diâmetro interno do tanque [m] */
   D_m: number;
-  /** Altura total do costado [m] */
   H_m: number;
-  /** Altura máxima do nível de líquido [m] (≤ H_m) */
   H_liq_max_m: number;
-  /** Área molhada calculada automaticamente? Se false, usar valor manual */
   areaAutoCalculada: boolean;
-  /** Área molhada manual [m²] — usado quando areaAutoCalculada = false */
   A_wet_manual_m2?: number;
 }
 
 export interface ProdutoAPI2000 {
-  /** Nome do produto (texto livre — ex.: "Diesel S10") */
   nome: string;
-  /** Classe de inflamabilidade conforme NBR 17505 / NFPA 30 */
   classe: ClasseLiquidoAPI2000;
-  /** Ponto de fulgor [°C] (opcional — para registro) */
   pontoFulgor_C?: number;
-  /** Ponto de ebulição [°C] (opcional — para alertas de escopo) */
   pontoEbulicao_C?: number;
-  /** Temperatura típica de armazenamento [°C] */
   T_armazenamento_C: number;
-  /** Sistema de blanketing / inertização? */
   blanketing: boolean;
-  /** Gás de blanketing (ex.: "N₂") — preenchido se blanketing = true */
   gasBlanketing?: string;
+  /**
+   * Calor latente de vaporização [kJ/kg] — necessário para emergência por fogo.
+   * Valores típicos: gasolina ≈ 300, diesel ≈ 250, etanol ≈ 841.
+   */
+  L_kJ_kg?: number | null;
+  /**
+   * Massa molecular do vapor [kg/kmol] — necessária para emergência por fogo.
+   * Valores típicos: gasolina ≈ 95, diesel ≈ 198, etanol = 46.
+   */
+  M_kg_kmol?: number | null;
 }
 
 export interface PressoesAPI2000 {
-  /** Pressão de projeto positiva do tanque [kPa(g)] */
   P_projeto_kPa: number;
-  /** Vácuo de projeto do tanque [kPa(g)] — valor positivo representa vácuo */
   V_projeto_kPa: number;
-  /**
-   * Pressão de ajuste do VPV [kPa(g)].
-   * Deve ser ≤ P_projeto do tanque.
-   * null = não definido pelo usuário.
-   */
   P_ajuste_VPV_kPa?: number | null;
-  /**
-   * Vácuo de ajuste do VPV [kPa(g)].
-   * null = não definido.
-   */
   V_ajuste_VPV_kPa?: number | null;
+  /** Pressão máxima admissível em emergência [kPa(g)] */
+  P_max_emergencia_kPa?: number | null;
 }
 
 export interface OperacaoAPI2000 {
-  /** Vazão máxima de enchimento [m³/h] */
   Q_enchimento_m3h: number;
-  /** Vazão máxima de esvaziamento [m³/h] */
   Q_esvaziamento_m3h: number;
-  /** Enchimento e esvaziamento podem ocorrer simultaneamente? */
   simultaneo: boolean;
-  /** Há sistema de recuperação de vapores? */
   recuperacaoVapor: boolean;
 }
 
 export interface FatoresNormativosAPI2000 {
   /**
    * Fator de outbreathing da API 2000 Tabela 1 [adimensional].
-   *
-   * Depende da classe do produto e temperatura de armazenamento.
-   * null = não preenchido → calc usa mínimo físico por deslocamento.
-   *
-   * INSTRUÇÃO: Consultar API Standard 2000, 7ª ed. (2014), Tabela 1,
-   * para o produto e temperatura de armazenamento do projeto.
+   * null = não preenchido → mínimo físico por deslocamento.
    */
   fator_outbreathing: number | null;
   /**
    * Fator de inbreathing da API 2000 Tabela 1 [adimensional].
-   * null = não preenchido → calc usa mínimo físico.
+   * null = não preenchido → mínimo físico.
    */
   fator_inbreathing: number | null;
 }
 
+export interface TermicoAPI2000 {
+  /** Considerar efeito térmico neste cálculo? */
+  considerar: boolean;
+  /**
+   * Vazão de efeito térmico [Nm³/h] da API 2000 Tabela 2.
+   * null = não preenchido (placeholder).
+   */
+  Q_termico_Nm3h: number | null;
+}
+
+export interface EmergenciaAPI2000 {
+  /** Calcular ventilação de emergência por fogo neste cálculo? */
+  calcular: boolean;
+  /** Modo de entrada: via calor calculado ou vazão direta */
+  modo: ModoEntradaEmergencia;
+  /**
+   * Taxa de absorção de calor [kW] calculada pelo usuário com API 2000 Seção 6.
+   * null = não informado.
+   */
+  Q_calor_kW: number | null;
+  /**
+   * Vazão de emergência informada diretamente [Nm³/h].
+   * null = não informado.
+   */
+  Q_emergencia_direto_Nm3h: number | null;
+  /**
+   * Fator ambiental F (da API 2000 Tabela 4 ou equivalente).
+   * null = não informado.
+   */
+  F_ambiental: number | null;
+  /** Temperatura de alívio [°C] para conversão calor→vapor */
+  T_alivio_C: number | null;
+  /** Sistema de resfriamento por água presente? */
+  resfriamentoAgua: boolean;
+  /** Isolamento térmico aprovado? */
+  isolamentoAprovado: boolean;
+}
+
 // ---------------------------------------------------------------------------
-// Defaults e fábrica
+// Defaults
 // ---------------------------------------------------------------------------
 
 export const PRESSOES_DEFAULT: PressoesAPI2000 = {
-  P_projeto_kPa: 1.0,   // tanque atmosférico típico: 0 a 6.9 kPa
-  V_projeto_kPa: 0.25,  // vácuo típico para tanques atmosféricos
+  P_projeto_kPa: 1.0,
+  V_projeto_kPa: 0.25,
   P_ajuste_VPV_kPa: null,
   V_ajuste_VPV_kPa: null,
+  P_max_emergencia_kPa: null,
 };
 
-/**
- * Cria um novo ProjetoAPI2000 com valores padrão.
- * id e criadoEm são gerados automaticamente.
- */
+export const TERMICO_DEFAULT: TermicoAPI2000 = {
+  considerar: true,
+  Q_termico_Nm3h: null,
+};
+
+export const EMERGENCIA_DEFAULT: EmergenciaAPI2000 = {
+  calcular: false,
+  modo: "calor_calculado",
+  Q_calor_kW: null,
+  Q_emergencia_direto_Nm3h: null,
+  F_ambiental: null,
+  T_alivio_C: null,
+  resfriamentoAgua: false,
+  isolamentoAprovado: false,
+};
+
+// ---------------------------------------------------------------------------
+// Fábrica
+// ---------------------------------------------------------------------------
+
 export function criarProjetoAPI2000(
   parcial?: Partial<Pick<ProjetoAPI2000, "nome" | "cliente" | "local" | "pasta" | "tagTanque">>,
 ): ProjetoAPI2000 {
@@ -191,6 +215,8 @@ export function criarProjetoAPI2000(
       classe: "II",
       T_armazenamento_C: 30,
       blanketing: false,
+      L_kJ_kg: null,
+      M_kg_kmol: null,
     },
     pressoes: { ...PRESSOES_DEFAULT },
     operacao: {
@@ -203,11 +229,12 @@ export function criarProjetoAPI2000(
       fator_outbreathing: null,
       fator_inbreathing: null,
     },
+    termico: { ...TERMICO_DEFAULT },
+    emergencia: { ...EMERGENCIA_DEFAULT },
     dispositivos: [],
   };
 }
 
-/** Novo ID de dispositivo */
 export function novoDispositivoId(): string {
   return `disp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
