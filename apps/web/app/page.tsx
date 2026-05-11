@@ -33,8 +33,8 @@ const MODULOS: ModuloCard[] = [
     titulo: "Ventilação Atmosférica",
     descricao:
       "Cálculo da capacidade de vent normal e de emergência (inbreathing / outbreathing). Cenários de enchimento, esvaziamento e incêndio.",
-    href: "#",
-    ativo: false,
+    href: "/api2000/novo",
+    ativo: true,
     icone: "💨",
   },
   {

@@ -145,6 +145,35 @@ export type {
   ListaMateriais,
 } from "./lista-materiais.js";
 
+// === API 2000 — Ventilação de Tanques ===
+export {
+  calcularRespiroNormal,
+  verificarDispositivo,
+  calcularAreaMolhadaVertical,
+  nm3hParaScfh,
+  scfhParaNm3h,
+  fatorCorrecaoTemperatura,
+  kPaParaMbar,
+  kPaParaMmca,
+  kPaParaOzIn2,
+  FATOR_NM3H_PARA_SCFH,
+} from "./api2000/index.js";
+
+export type {
+  AlertaVentilacao,
+  ClasseLiquidoAPI2000,
+  DispositivoAlivioAPI2000,
+  EntradaRespiroNormal,
+  EntradaAreaMolhada,
+  NivelAlerta,
+  ResultadoAreaMolhada,
+  ResultadoRespiroNormal,
+  StatusDispositivo,
+  TipoDispositivo,
+  TipoTanqueAPI2000,
+  VerificacaoDispositivo,
+} from "./api2000/index.js";
+
 // === Fase 5 — Escadas, plataformas e guarda-corpos ===
 export {
   calcularAcessorios,
