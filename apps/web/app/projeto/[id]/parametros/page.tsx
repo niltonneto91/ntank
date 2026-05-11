@@ -27,6 +27,19 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
   const { id } = use(params);
   const { estado, atualizar } = useProjeto(id);
 
+  // ⚠️ Todos os hooks ANTES de qualquer return condicional (Rules of Hooks)
+  const [pastasDisponiveis, setPastasDisponiveis] = useState<string[]>([]);
+  const [novaPastaInput, setNovaPastaInput] = useState("");
+  const [mostraNovaPasta, setMostraNovaPasta] = useState(false);
+  useEffect(() => {
+    listarProjetos().then((todos) => {
+      const pastas = [
+        ...new Set(todos.map((p) => p.pasta?.trim() ?? "").filter(Boolean)),
+      ].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setPastasDisponiveis(pastas);
+    });
+  }, []);
+
   if (estado.status === "carregando")
     return <p className="text-sm text-carbono-500">Carregando…</p>;
   if (estado.status !== "ok")
@@ -43,19 +56,6 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
 
   const { projeto } = estado;
   const { parametros: p, fundo, teto } = projeto;
-
-  // Pastas existentes nos outros projetos (para o dropdown de pasta)
-  const [pastasDisponiveis, setPastasDisponiveis] = useState<string[]>([]);
-  const [novaPastaInput, setNovaPastaInput] = useState("");
-  const [mostraNovaPasta, setMostraNovaPasta] = useState(false);
-  useEffect(() => {
-    listarProjetos().then((todos) => {
-      const pastas = [...new Set(todos.map((p) => p.pasta?.trim() ?? "").filter(Boolean))].sort(
-        (a, b) => a.localeCompare(b, "pt-BR"),
-      );
-      setPastasDisponiveis(pastas);
-    });
-  }, []);
 
   function setParam<K extends keyof typeof p>(chave: K, valor: (typeof p)[K]) {
     atualizar((proj) => ({
