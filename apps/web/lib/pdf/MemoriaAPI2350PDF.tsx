@@ -52,6 +52,22 @@ export interface CalculoAPI2350 {
   categoriaRes:  ResultadoCategoriaAPI2350;
   Q_efetiva:     number;
   t_disponivel_min: number;
+  // Fase 2B — cenário conservador vs. líquido
+  Q_liquida:            number | null;
+  volResLiquido:        ResultadoVolumeRespostaAPI2350 | null;
+  t_disponivel_liquido: number | null;
+  // Fase 2B — checklist de conformidade
+  conformidade: {
+    escopo:          boolean;
+    escopoReqAval:   boolean;
+    distanciaHHCH:   boolean;
+    mwAbaixoHH:      boolean;
+    chAbaixoFisico:  boolean;
+    aops:            string | null; // "APROVADO" | "REPROVADO" | "INDETERMINADO" | null
+    tempoSuficiente: boolean;
+    tempoCateg:      boolean | null; // null = Annex G não preenchido
+  };
+  statusGeral: "CONFORME" | "NAO_CONFORME" | "INCOMPLETO";
 }
 
 interface Props {
@@ -134,6 +150,19 @@ const s = StyleSheet.create({
   // Disclaimer
   disclaimer: { backgroundColor: CREME, padding: 8, borderRadius: 4, marginTop: 10 },
   discTxt:    { fontSize: 7.5, color: CARBONO_500, lineHeight: 1.5 },
+
+  // Checklist de conformidade (Página 5)
+  statusBox:    { borderWidth: 2, borderRadius: 6, padding: 10, marginBottom: 12, alignItems: "center" },
+  statusTxt:    { fontFamily: "Helvetica-Bold", fontSize: 13, textAlign: "center" },
+  statusSub:    { fontSize: 8.5, textAlign: "center", marginTop: 3, color: CARBONO_500 },
+  ckRow:        { flexDirection: "row", alignItems: "flex-start", paddingVertical: 4, paddingHorizontal: 6, borderRadius: 3, marginBottom: 2 },
+  ckRowOk:      { backgroundColor: "#f0fdf4" },
+  ckRowErr:     { backgroundColor: "#fef2f2" },
+  ckRowPend:    { backgroundColor: "#fefce8" },
+  ckRowNa:      { backgroundColor: CREME },
+  ckIcon:       { width: 14, fontFamily: "Helvetica-Bold", fontSize: 9 },
+  ckLabel:      { flex: 1, fontSize: 8.5, lineHeight: 1.4 },
+  ckObs:        { fontSize: 7.5, color: CARBONO_500, marginLeft: 14, marginTop: 1 },
 });
 
 // ---------------------------------------------------------------------------
@@ -580,6 +609,215 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
             </Text>
           </>
         )}
+
+        <RodapePagina projeto={p} />
+      </Page>
+
+      {/* ================================================================
+          PÁGINA 5 — CHECKLIST DE CONFORMIDADE
+      ================================================================ */}
+      <Page size="A4" style={s.page}>
+        <HeaderPagina tag={p.tagTanque} norma={p.normaContrucao} />
+
+        <Secao titulo="5. Checklist de conformidade" />
+
+        {/* Status geral */}
+        {(() => {
+          const status = c.statusGeral;
+          const borderColor = status === "CONFORME" ? "#16a34a"
+            : status === "NAO_CONFORME" ? "#dc2626" : "#d97706";
+          const textColor = borderColor;
+          const label = status === "CONFORME"
+            ? "✓  ANÁLISE CONFORME — todos os requisitos verificados"
+            : status === "NAO_CONFORME"
+            ? "✗  NÃO CONFORME — revisar itens em vermelho"
+            : "⚠  ANÁLISE INCOMPLETA — preencher tempo mínimo (Annex G)";
+          const sub = status === "CONFORME"
+            ? "O sistema de OPS atende aos requisitos verificados abaixo."
+            : status === "NAO_CONFORME"
+            ? "Um ou mais requisitos não estão satisfeitos. Veja os itens abaixo."
+            : "O campo 'Tempo mínimo — Annex G' não foi preenchido. Consulte o exemplar licenciado da API 2350.";
+          return (
+            <View style={[s.statusBox, { borderColor }]}>
+              <Text style={[s.statusTxt, { color: textColor }]}>{label}</Text>
+              <Text style={s.statusSub}>{sub}</Text>
+            </View>
+          );
+        })()}
+
+        {/* Tabela de itens */}
+        {(() => {
+          const cf = c.conformidade;
+
+          // Escopo
+          const escopoOk      = cf.escopo || cf.escopoReqAval;
+          const escopoErrMsg  = !escopoOk ? "Produto/instalação fora do escopo da API 2350 — aplicar norma pertinente." : "";
+          const escopoObs     = cf.escopoReqAval ? "Escopo requer avaliação adicional — produto/operação limítrofe." : "";
+
+          // AOPS
+          const aopsNa        = cf.aops === null;
+          const aopsOk        = cf.aops === "APROVADO";
+
+          // Tempo Annex G
+          const tempoPend     = cf.tempoCateg === null;
+          const tempoOk       = cf.tempoCateg === true;
+
+          const itens = [
+            {
+              id: "escopo",
+              label: "Produto/instalação dentro do escopo da API 2350",
+              ok: escopoOk,
+              pendente: false,
+              na: false,
+              obs: escopoObs || escopoErrMsg,
+            },
+            {
+              id: "distHHCH",
+              label: "Distância HH → CH suficiente para o volume de resposta",
+              ok: cf.distanciaHHCH,
+              pendente: false,
+              na: false,
+              obs: !cf.distanciaHHCH
+                ? `Mínimo requerido: ${fmtN1(c.niveisRes.distancia_efetiva_minima_mm)} mm · Disponível: ${fmtN1(c.niveisRes.distancia_CH_HH_mm)} mm`
+                : `${fmtN1(c.niveisRes.distancia_CH_HH_mm)} mm ≥ ${fmtN1(c.niveisRes.distancia_efetiva_minima_mm)} mm mínimo`,
+            },
+            {
+              id: "tempDisp",
+              label: "Tempo disponível (HH → CH) ≥ tempo de resposta adotado",
+              ok: cf.tempoSuficiente,
+              pendente: false,
+              na: false,
+              obs: `${fmtN2(c.t_disponivel_min)} min disponível · ${fmtN2(c.tempoRes.total_adotado_min)} min adotado`,
+            },
+            {
+              id: "mwHH",
+              label: "MW (nível máximo de trabalho) abaixo do HH",
+              ok: cf.mwAbaixoHH,
+              pendente: false,
+              na: false,
+              obs: !cf.mwAbaixoHH ? "Nível MW deve estar abaixo do LAHH (HH)." : "",
+            },
+            {
+              id: "chFisico",
+              label: "CH (Critical High) abaixo do nível físico máximo",
+              ok: cf.chAbaixoFisico,
+              pendente: false,
+              na: false,
+              obs: !cf.chAbaixoFisico ? "CH deve estar abaixo do nível de transbordamento físico." : "",
+            },
+            {
+              id: "tempoCateg",
+              label: "Tempo de resposta adotado ≥ mínimo da categoria (Annex G)",
+              ok: tempoOk,
+              pendente: tempoPend,
+              na: false,
+              obs: tempoPend
+                ? "Preencher o campo 'Tempo mínimo — Annex G' com o valor do seu exemplar licenciado da API 2350."
+                : tempoOk
+                ? `${fmtN2(c.tempoRes.total_adotado_min)} min adotado ≥ ${fmtN2(p.tempoResposta.tempoMinimoCategoria_min!)} min mínimo`
+                : `${fmtN2(c.tempoRes.total_adotado_min)} min adotado < ${fmtN2(p.tempoResposta.tempoMinimoCategoria_min!)} min mínimo`,
+            },
+            {
+              id: "aops",
+              label: "AOPS — sensor e nível configurados corretamente",
+              ok: aopsOk,
+              pendente: false,
+              na: aopsNa,
+              obs: aopsNa
+                ? "AOPS não configurado nesta análise."
+                : !aopsOk
+                ? "Verificar configuração do AOPS (nível e sensor)."
+                : "Nível AOPS entre HH e CH.",
+            },
+          ];
+
+          return (
+            <View>
+              {itens.map(item => {
+                const rowStyle = item.na
+                  ? [s.ckRow, s.ckRowNa]
+                  : item.pendente
+                  ? [s.ckRow, s.ckRowPend]
+                  : item.ok
+                  ? [s.ckRow, s.ckRowOk]
+                  : [s.ckRow, s.ckRowErr];
+                const iconColor = item.na ? CARBONO_300
+                  : item.pendente ? "#d97706"
+                  : item.ok ? "#16a34a"
+                  : "#dc2626";
+                const icon = item.na ? "—"
+                  : item.pendente ? "⚠"
+                  : item.ok ? "✓"
+                  : "✗";
+
+                return (
+                  <View key={item.id}>
+                    <View style={rowStyle}>
+                      <Text style={[s.ckIcon, { color: iconColor }]}>{icon}</Text>
+                      <Text style={s.ckLabel}>{item.label}</Text>
+                    </View>
+                    {item.obs ? (
+                      <Text style={s.ckObs}>{item.obs}</Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })()}
+
+        {/* Cenário informativo: vazão líquida (se houver saída simultânea) */}
+        {c.Q_liquida != null && c.volResLiquido != null && (
+          <>
+            <Subtitulo titulo="Informativo: cenário com saída simultânea de produto" />
+            <Text style={{ fontSize: 7.5, color: CARBONO_500, marginBottom: 4, lineHeight: 1.4 }}>
+              A API 2350 recomenda abordagem conservadora (sem descontar a saída simultânea) para o
+              dimensionamento oficial. O cenário abaixo é apenas informativo — mostra o efeito
+              da saída sobre o volume e o tempo disponível.
+            </Text>
+            <View style={s.table}>
+              {[
+                ["Vazão de saída simultânea",     `${fmtN1(p.operacao.vazaoSaida_m3h ?? 0)} m³/h`],
+                ["Vazão líquida (entrada − saída)", `${fmtN1(c.Q_liquida)} m³/h`],
+                ["Volume de resposta (líquido)",   `${fmtN3(c.volResLiquido.volume_m3)} m³`],
+                ["Tempo disponível (líquido)",     c.t_disponivel_liquido != null
+                  ? `${fmtN2(c.t_disponivel_liquido)} min` : "—"],
+              ].map(([l, v], i, arr) => (
+                <View key={l} style={i < arr.length - 1 ? s.tRow : s.tRowLast}>
+                  <Text style={s.tLabel}>{l}</Text>
+                  <Text style={s.tValue}>{v}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Nota sobre categoria OPS */}
+        <Subtitulo titulo="Categoria OPS classificada" />
+        {(() => {
+          const catCor2 = catEstilo[String(c.categoriaRes.categoria)] ?? catEstilo["0"];
+          return (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Text style={[s.catNumero, { color: catCor2.color, fontSize: 18, textAlign: "left" }]}>
+                Categoria {c.categoriaRes.categoria}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: CARBONO_700 }}>
+                ({c.categoriaRes.tipoOPS}) — {c.categoriaRes.justificativa}
+              </Text>
+            </View>
+          );
+        })()}
+
+        {/* Disclaimer */}
+        <View style={s.disclaimer}>
+          <Text style={s.discTxt}>
+            CHECKLIST PRELIMINAR — Este resumo é uma ferramenta de apoio ao dimensionamento;
+            não substitui a análise de risco formal, ART/RRT do responsável técnico nem a
+            aprovação dos órgãos fiscalizadores.{"\n"}
+            Os valores de tempo mínimo por categoria (Annex G) devem ser verificados no
+            exemplar licenciado da API Standard 2350, 5ª edição (2020) e não são reproduzidos neste documento.
+          </Text>
+        </View>
 
         <RodapePagina projeto={p} />
       </Page>

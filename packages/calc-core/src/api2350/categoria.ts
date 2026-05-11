@@ -123,10 +123,10 @@ export function classificarCategoriaOPS(
   }
 
   // --- Avaliação Cat 1 ---
-  if (temATG || (nivelTransmitidoRemoto === false && !alarmeHHTransmitidoLocalOcupado)) {
-    // Tem alguma instrumentação local mas sem transmissão completa
-    if (temATG) atendidos.push("ATG instalado (display local)");
-    else atendidos.push("Instrumento local de nível (sem ATG)");
+  // Cat 1 requer pelo menos um ATG com display local (sem transmissão remota completa).
+  // Sem ATG → Cat 0 (instrumentação manual apenas).
+  if (temATG) {
+    atendidos.push("ATG instalado (display local)");
 
     if (presencaOperacional !== "plena") {
       alertas.push({

@@ -339,7 +339,65 @@ export default function API2350Page({ params }: PageProps) {
         ? Math.round(((niveisRes.distancia_CH_HH_mm / 1000) * taxaRes.A_m2) / Q_efetiva * 60 * 100) / 100
         : 0;
 
-    return { escopoRes, taxaRes, tempoRes, volRes, niveisRes, categoriaRes, Q_efetiva, t_disponivel_min };
+    // --- Cenário de vazão líquida (conservador vs. informativo) ---
+    // API 2350 recomenda abordagem conservadora (sem descontar saída).
+    // Este valor é apenas informativo — mostra o quanto a saída simultânea ajuda.
+    const Q_liquida =
+      p.operacao.saidaSimultanea && (p.operacao.vazaoSaida_m3h ?? 0) > 0
+        ? Math.max(0, Q_efetiva - (p.operacao.vazaoSaida_m3h ?? 0))
+        : null;
+    const volResLiquido =
+      Q_liquida != null
+        ? calcularVolumeRespostaAPI2350({
+            Q_efetiva_m3h:    Q_liquida,
+            tempo_adotado_min: tempoRes.total_adotado_min,
+          })
+        : null;
+    const t_disponivel_liquido =
+      Q_liquida != null && Q_liquida > 0
+        ? Math.round(((niveisRes.distancia_CH_HH_mm / 1000) * taxaRes.A_m2) / Q_liquida * 60 * 100) / 100
+        : null;
+
+    // --- Checklist de conformidade ---
+    const tempoCategOk =
+      p.tempoResposta.tempoMinimoCategoria_min != null
+        ? tempoRes.total_adotado_min >= p.tempoResposta.tempoMinimoCategoria_min
+        : null; // null = não avaliado (campo não preenchido)
+
+    const conformidade = {
+      escopo:           escopoRes.resultado === "dentro",
+      escopoReqAval:    escopoRes.resultado === "requer-avaliacao",
+      distanciaHHCH:    niveisRes.status_distancia_HH_CH === "APROVADO",
+      mwAbaixoHH:       niveisRes.status_MW_abaixo_HH === "APROVADO",
+      chAbaixoFisico:   niveisRes.status_CH_abaixo_fisico === "APROVADO",
+      aops:             niveisRes.status_AOPS, // "APROVADO" | "REPROVADO" | "INDETERMINADO" | null
+      tempoSuficiente:  t_disponivel_min > 0 && t_disponivel_min >= tempoRes.total_adotado_min,
+      tempoCateg:       tempoCategOk,
+    } as const;
+
+    // Status geral: INCOMPLETO se Annex G não preenchido, CONFORME se tudo OK
+    const itensObrigatorios: boolean[] = [
+      conformidade.escopo || conformidade.escopoReqAval,
+      conformidade.distanciaHHCH,
+      conformidade.mwAbaixoHH,
+      conformidade.chAbaixoFisico,
+      conformidade.tempoSuficiente,
+      ...(conformidade.tempoCateg != null ? [conformidade.tempoCateg] : []),
+      ...(conformidade.aops != null ? [conformidade.aops === "APROVADO"] : []),
+    ];
+    const statusGeral: "CONFORME" | "NAO_CONFORME" | "INCOMPLETO" =
+      conformidade.tempoCateg === null
+        ? "INCOMPLETO"
+        : itensObrigatorios.every(Boolean)
+        ? "CONFORME"
+        : "NAO_CONFORME";
+
+    return {
+      escopoRes, taxaRes, tempoRes, volRes, niveisRes, categoriaRes,
+      Q_efetiva, t_disponivel_min,
+      Q_liquida, volResLiquido, t_disponivel_liquido,
+      conformidade, statusGeral,
+    };
   }, [estado]);
 
   // ---------------------------------------------------------------------------
@@ -457,7 +515,24 @@ export default function API2350Page({ params }: PageProps) {
             {p.cliente && <> · <strong>Cliente:</strong> {p.cliente}</>}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 items-start gap-2">
+          {/* Badge de status geral */}
+          {calculo && (
+            <span className={[
+              "rounded-full border px-3 py-1 text-xs font-bold",
+              calculo.statusGeral === "CONFORME"
+                ? "border-green-300 bg-green-100 text-green-800"
+                : calculo.statusGeral === "NAO_CONFORME"
+                ? "border-red-300 bg-red-100 text-red-800"
+                : "border-amber-300 bg-amber-100 text-amber-800",
+            ].join(" ")}>
+              {calculo.statusGeral === "CONFORME"
+                ? "✓ CONFORME"
+                : calculo.statusGeral === "NAO_CONFORME"
+                ? "✗ NÃO CONFORME"
+                : "⚠ INCOMPLETO"}
+            </span>
+          )}
           {calculo && (
             <Button onClick={baixarPDF} disabled={gerando} variant="ghost">
               {gerando ? "⏳ Gerando…" : "⬇ Memória PDF"}
@@ -678,16 +753,28 @@ export default function API2350Page({ params }: PageProps) {
                 step={0.5} min={0}
                 hint="Deve ser ≥ soma dos componentes. Zero = usar calculado." />
               <div>
-                <NumberField label="Tempo mínimo exigido pela categoria (Annex G)" unit="min"
+                <NumberField label="Tempo mínimo da categoria — Annex G" unit="min"
                   value={p.tempoResposta.tempoMinimoCategoria_min ?? 0}
                   onChange={v => updTempo({ tempoMinimoCategoria_min: v > 0 ? v : null })}
                   step={0.5} min={0}
-                  hint="Consultar Annex G do exemplar licenciado da API 2350." />
-                {p.tempoResposta.tempoMinimoCategoria_min == null && (
-                  <p className="mt-1 text-xs text-amber-700">
-                    ⚠ Não preenchido — consultar API 2350 Annex G (tabela licenciada).
-                  </p>
-                )}
+                  hint="Inserir o valor da Tabela G-1 do seu exemplar licenciado da API 2350." />
+                <div className={[
+                  "mt-1 rounded border px-2 py-1.5 text-xs leading-snug",
+                  p.tempoResposta.tempoMinimoCategoria_min == null
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : calculo?.tempoRes && p.tempoResposta.tempoMinimoCategoria_min <= calculo.tempoRes.total_adotado_min
+                    ? "border-green-200 bg-green-50 text-green-800"
+                    : "border-red-200 bg-red-50 text-red-800",
+                ].join(" ")}>
+                  {p.tempoResposta.tempoMinimoCategoria_min == null ? (
+                    <>⚠ <strong>Campo obrigatório para verificação de conformidade.</strong>{" "}
+                    Consulte a API 2350 Annex G (Tabela G-1) no exemplar licenciado da norma e insira o valor correspondente à categoria identificada pelo sistema.</>
+                  ) : calculo?.tempoRes && p.tempoResposta.tempoMinimoCategoria_min <= calculo.tempoRes.total_adotado_min ? (
+                    <>✓ Tempo adotado ({n2(calculo.tempoRes.total_adotado_min)} min) ≥ mínimo da categoria ({n2(p.tempoResposta.tempoMinimoCategoria_min)} min)</>
+                  ) : (
+                    <>✗ Tempo adotado ({n2(calculo?.tempoRes.total_adotado_min ?? 0)} min) &lt; mínimo da categoria ({n2(p.tempoResposta.tempoMinimoCategoria_min)} min) — revisar os componentes ou o nível adotado.</>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
@@ -915,7 +1002,14 @@ export default function API2350Page({ params }: PageProps) {
             <Card title="Volume de resposta requerido">
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-carbono-100">
-                  <tr><td className="py-1 text-carbono-600">Volume</td>
+                  {/* Conservador (adotado para cálculo) */}
+                  <tr>
+                    <td className="py-1 text-carbono-600">
+                      Volume conservador
+                      {calculo.Q_liquida != null && (
+                        <span className="ml-1 text-[10px] text-carbono-400">(adotado)</span>
+                      )}
+                    </td>
                     <td className="py-1 text-right font-mono font-bold text-carbono">
                       {n3(calculo.volRes.volume_m3)} m³
                     </td>
@@ -930,6 +1024,35 @@ export default function API2350Page({ params }: PageProps) {
                       {n2(calculo.volRes.volume_bbl)} bbl
                     </td>
                   </tr>
+                  {/* Comparativo líquido (apenas quando há saída simultânea) */}
+                  {calculo.volResLiquido != null && (
+                    <>
+                      <tr>
+                        <td className="pt-2 text-carbono-500 text-xs italic" colSpan={2}>
+                          Cenário informativo — com saída simultânea ({n1(calculo.Q_liquida ?? 0)} m³/h líquido):
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 text-carbono-500">Volume líquido</td>
+                        <td className="py-1 text-right font-mono text-carbono-500">
+                          {n3(calculo.volResLiquido.volume_m3)} m³
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-1 text-xs text-carbono-400">Tempo disp. (líquido)</td>
+                        <td className="py-1 text-right text-xs font-mono text-carbono-400">
+                          {calculo.t_disponivel_liquido != null
+                            ? `${n2(calculo.t_disponivel_liquido)} min`
+                            : "—"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan={2} className="pb-1 text-[10px] text-carbono-400 italic">
+                          ⚠ API 2350 recomenda abordagem conservadora. Este cenário é apenas informativo.
+                        </td>
+                      </tr>
+                    </>
+                  )}
                 </tbody>
               </table>
             </Card>
@@ -1009,6 +1132,100 @@ export default function API2350Page({ params }: PageProps) {
                   .filter(a => a.nivel !== "AVISO_LEGAL")
                   .map(a => <Alerta key={a.code} {...a} />)}
               </div>
+            </Card>
+
+            {/* Checklist de conformidade */}
+            <Card title="Checklist de conformidade">
+              {/* Status geral */}
+              <div className={[
+                "mb-3 rounded-lg border-2 px-4 py-2 text-center text-sm font-bold",
+                calculo.statusGeral === "CONFORME"
+                  ? "border-green-400 bg-green-50 text-green-800"
+                  : calculo.statusGeral === "NAO_CONFORME"
+                  ? "border-red-400 bg-red-50 text-red-800"
+                  : "border-amber-400 bg-amber-50 text-amber-800",
+              ].join(" ")}>
+                {calculo.statusGeral === "CONFORME" && "✓ ANÁLISE CONFORME — todos os requisitos verificados"}
+                {calculo.statusGeral === "NAO_CONFORME" && "✗ NÃO CONFORME — revisar itens marcados em vermelho"}
+                {calculo.statusGeral === "INCOMPLETO" && "⚠ ANÁLISE INCOMPLETA — preencher o campo Annex G"}
+              </div>
+
+              {/* Tabela de itens */}
+              <div className="space-y-1">
+                {([
+                  {
+                    id: "escopo",
+                    label: "Tanque dentro do escopo API 2350",
+                    ok: calculo.conformidade.escopo,
+                    pendente: calculo.conformidade.escopoReqAval,
+                    obs: calculo.conformidade.escopoReqAval ? "Requer avaliação adicional pelo proprietário/operador" : undefined,
+                  },
+                  {
+                    id: "distHHCH",
+                    label: `Distância HH→CH ≥ mínimo efetivo (${n1(calculo.niveisRes.distancia_efetiva_minima_mm)} mm)`,
+                    ok: calculo.conformidade.distanciaHHCH,
+                    obs: !calculo.conformidade.distanciaHHCH
+                      ? `Disponível: ${n1(calculo.niveisRes.distancia_CH_HH_mm)} mm`
+                      : undefined,
+                  },
+                  {
+                    id: "MW",
+                    label: "MW abaixo do HH (nível de alarme ≠ nível de operação)",
+                    ok: calculo.conformidade.mwAbaixoHH,
+                  },
+                  {
+                    id: "CH",
+                    label: "CH abaixo do nível físico máximo (ponto de transbordamento)",
+                    ok: calculo.conformidade.chAbaixoFisico,
+                  },
+                  {
+                    id: "tempo",
+                    label: `Tempo disponível HH→CH ≥ tempo de resposta (${n2(calculo.tempoRes.total_adotado_min)} min)`,
+                    ok: calculo.conformidade.tempoSuficiente,
+                    obs: `Disponível: ${n2(calculo.t_disponivel_min)} min`,
+                  },
+                  ...(calculo.conformidade.tempoCateg !== null
+                    ? [{
+                        id: "categ",
+                        label: `Tempo adotado ≥ mínimo Annex G (${n2(p.tempoResposta.tempoMinimoCategoria_min ?? 0)} min)`,
+                        ok: calculo.conformidade.tempoCateg,
+                      }]
+                    : [{
+                        id: "categ",
+                        label: "Tempo mínimo categoria (Annex G) — aguardando preenchimento",
+                        ok: false,
+                        pendente: true,
+                      }]),
+                  ...(calculo.conformidade.aops !== null
+                    ? [{
+                        id: "aops",
+                        label: "AOPS posicionado entre HH e CH",
+                        ok: calculo.conformidade.aops === "APROVADO",
+                      }]
+                    : []),
+                ]).map(({ id, label, ok, pendente, obs }) => (
+                  <div key={id} className={[
+                    "flex items-start gap-2 rounded px-2 py-1.5 text-xs",
+                    pendente
+                      ? "bg-amber-50"
+                      : ok
+                      ? "bg-green-50"
+                      : "bg-red-50",
+                  ].join(" ")}>
+                    <span className="mt-0.5 shrink-0 font-bold">
+                      {pendente ? "⚠" : ok ? "✓" : "✗"}
+                    </span>
+                    <span className={pendente ? "text-amber-800" : ok ? "text-green-800" : "text-red-800"}>
+                      {label}
+                      {obs && <span className="ml-1 opacity-75">({obs})</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-2 text-[10px] text-carbono-400 leading-snug">
+                Checklist preliminar — não substitui análise de risco formal e ART/RRT.
+              </p>
             </Card>
 
             {/* Categoria OPS */}
