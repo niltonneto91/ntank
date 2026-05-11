@@ -117,6 +117,19 @@ export const PINTURA_DEFAULT: PinturaProjeto = {
   acabamento:    { espessura_um: 70,  rendimento_m2_L: 8, custo_R$_L: 0 },
 };
 
+// ===== Fundo duplo =====
+
+export interface FundoDuploProjeto {
+  /** Fundo duplo ativo? */
+  ativo: boolean;
+  /** Largura da chapa do fundo duplo (mm). Default = larguraChapaFundo_mm ou larguraChapa_mm. */
+  larguraChapa_mm?: number;
+  /** Comprimento da chapa do fundo duplo (mm). Default = comprimentoChapaFundo_mm ou comprimentoChapa_mm. */
+  comprimentoChapa_mm?: number;
+  /** Sobrespessura de corrosão do fundo duplo (mm). Default = CA_fundo_mm ou CA_mm. */
+  CA_mm?: number;
+}
+
 // ===== Bloco 2 — Fundo e teto (Fase 3) =====
 
 export type TipoFundoUI =
@@ -280,6 +293,8 @@ export interface ProjetoNTANK {
   acessorios: AcessoriosProjeto;
   /** Variante escolhida pelo usuário (sobrescreve a recomendação). */
   variantePreferida?: "NBR 7821 Simplificada" | "API 650 1-Foot" | "API 650 VDP";
+  /** Fundo duplo (segundo fundo interno). */
+  fundoDuplo?: FundoDuploProjeto;
   /** Selo flutuante interno: suprime VPV e adiciona ventiladores no teto. */
   seloFlutuante?: boolean;
   /** Parâmetros de soldagem (processos + custos de consumíveis). */
@@ -334,6 +349,7 @@ export function criarProjeto(parcial?: Partial<ProjetoNTANK>): ProjetoNTANK {
       plataformas: [...ACESSORIOS_DEFAULT.plataformas],
     },
     variantePreferida: parcial?.variantePreferida,
+    fundoDuplo: parcial?.fundoDuplo,
     seloFlutuante: parcial?.seloFlutuante,
     soldagem: parcial?.soldagem,
     pintura: parcial?.pintura,
@@ -381,6 +397,7 @@ export function migrarProjeto(p: ProjetoNTANK): ProjetoNTANK {
           escada: { ...ACESSORIOS_DEFAULT.escada },
           plataformas: [],
         },
+    fundoDuplo: p.fundoDuplo,
     seloFlutuante: p.seloFlutuante,
     soldagem: p.soldagem,
     pintura: p.pintura,

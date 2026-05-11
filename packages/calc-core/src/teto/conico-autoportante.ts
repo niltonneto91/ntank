@@ -44,9 +44,14 @@ export function calcularTetoConicoAutoportante(
 
   // Espessura calculada com D nominal (governa a resistência estrutural)
   const e_estrutural = D_m / (4.8 * senTheta);
+  const governaMinimo = e_estrutural < E_TETO_MIN_NOMINAL_MM;
   const e_calc = Math.max(E_TETO_MIN_NOMINAL_MM, e_estrutural) + entrada.CA_mm;
 
-  const chapa = selecionarChapaComercial(e_calc);
+  // Mínimo nominal de 5 mm: não existe chapa de 5 mm no mercado.
+  // Quando o mínimo governa, usar 4,75 mm (3/16") como base estrutural,
+  // igual à prática adotada no costado (one-foot.ts e vdp.ts).
+  const e_para_comercial = governaMinimo ? 4.75 + entrada.CA_mm : e_calc;
+  const chapa = selecionarChapaComercial(e_para_comercial);
 
   // Área usa D_teto (diâmetro externo) para massa correta
   const area_m2 = (Math.PI * D_teto_m * D_teto_m) / (4 * cosTheta);

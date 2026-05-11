@@ -78,7 +78,8 @@ describe("Teto cônico suportado", () => {
       anguloCone_graus: 9.5,
     });
     expect(r.e_calc_mm).toBeCloseTo(6.5, 3);
-    expect(r.e_adotada_mm).toBe(8); // 5/16" = 8 mm é o comercial >= 6.5
+    // Base estrutural 4,75mm (3/16") + CA 1,5mm = 6,25mm → 1/4" (6,35mm) é o comercial ≥ 6,25mm
+    expect(r.e_adotada_mm).toBe(6.35);
   });
 
   it("default paramétrico: detalhe de estrutura com vigas, anel, colunas e conexões", () => {
@@ -99,14 +100,14 @@ describe("Teto cônico suportado", () => {
     expect(det.massa_conexoes_kg).toBeGreaterThan(0);
   });
 
-  it("D < 12 m: zero colunas internas", () => {
+  it("D < 12 m: sempre 1 tubo central (regra NTN)", () => {
     const r = calcularTeto({
       D_mm: 8000,
       CA_mm: 1.5,
       tipo: "conico-suportado",
       anguloCone_graus: 9.5,
     });
-    expect(r.detalheEstrutura!.colunas.quantidade).toBe(0);
+    expect(r.detalheEstrutura!.colunas.quantidade).toBe(1);
   });
 
   it("D ≥ 18 m: mais de 1 coluna", () => {

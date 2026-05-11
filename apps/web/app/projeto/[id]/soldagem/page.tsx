@@ -178,6 +178,42 @@ export default function ProjetoSoldagemPage({ params }: PageProps) {
         </div>
       </Card>
 
+      {/* Custos de consumíveis — antes das tabelas para fácil preenchimento */}
+      <Card
+        title="Custo dos consumíveis de soldagem"
+        subtitle="Insira os preços unitários para calcular o custo total estimado."
+      >
+        <div className="grid gap-3 md:grid-cols-3">
+          <NumberField
+            label="Eletrodo revestido (SMAW)"
+            unit="R$/kg"
+            value={s.custoEletrodo_R$_kg}
+            onChange={(v) => setSoldagem("custoEletrodo_R$_kg", v)}
+            step={0.5}
+            min={0}
+            hint="Eletrodo E7018, E6013 etc."
+          />
+          <NumberField
+            label="Arame (GMAW/FCAW)"
+            unit="R$/kg"
+            value={s.custoArame_R$_kg}
+            onChange={(v) => setSoldagem("custoArame_R$_kg", v)}
+            step={0.5}
+            min={0}
+            hint="Arame sólido ER70S-6 ou tubular E71T-1."
+          />
+          <NumberField
+            label="Gás de proteção"
+            unit="R$/m³"
+            value={s.custoGasProtecao_R$_m3}
+            onChange={(v) => setSoldagem("custoGasProtecao_R$_m3", v)}
+            step={0.5}
+            min={0}
+            hint="CO₂ ou mistura Ar-CO₂."
+          />
+        </div>
+      </Card>
+
       {/* Juntas por componente */}
       {resultado.componentes.map((comp) => (
         <Card
@@ -273,42 +309,6 @@ export default function ProjetoSoldagemPage({ params }: PageProps) {
           </div>
         </Card>
       ))}
-
-      {/* Custos de consumíveis */}
-      <Card
-        title="Custo dos consumíveis de soldagem"
-        subtitle="Insira os preços unitários para calcular o custo total estimado."
-      >
-        <div className="grid gap-3 md:grid-cols-3">
-          <NumberField
-            label="Eletrodo revestido (SMAW)"
-            unit="R$/kg"
-            value={s.custoEletrodo_R$_kg}
-            onChange={(v) => setSoldagem("custoEletrodo_R$_kg", v)}
-            step={0.5}
-            min={0}
-            hint="Eletrodo E7018, E6013 etc."
-          />
-          <NumberField
-            label="Arame (GMAW/FCAW)"
-            unit="R$/kg"
-            value={s.custoArame_R$_kg}
-            onChange={(v) => setSoldagem("custoArame_R$_kg", v)}
-            step={0.5}
-            min={0}
-            hint="Arame sólido ER70S-6 ou tubular E71T-1."
-          />
-          <NumberField
-            label="Gás de proteção"
-            unit="R$/m³"
-            value={s.custoGasProtecao_R$_m3}
-            onChange={(v) => setSoldagem("custoGasProtecao_R$_m3", v)}
-            step={0.5}
-            min={0}
-            hint="CO₂ ou mistura Ar-CO₂."
-          />
-        </div>
-      </Card>
 
       {/* Corte oxicombustível + discos */}
       <Card

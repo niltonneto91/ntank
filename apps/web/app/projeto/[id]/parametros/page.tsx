@@ -11,6 +11,7 @@ import { ProjetoHeader } from "@/components/ProjetoHeader";
 import { Stepper } from "@/components/Stepper";
 import { useProjeto } from "@/lib/useProjeto";
 import type {
+  FundoDuploProjeto,
   FundoProjeto,
   TetoProjeto,
   TipoFundoUI,
@@ -57,6 +58,16 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
       fundo: { ...proj.fundo, [chave]: valor },
     }));
   }
+  function setFundoDuplo<K extends keyof FundoDuploProjeto>(
+    chave: K,
+    valor: FundoDuploProjeto[K],
+  ) {
+    atualizar((proj) => ({
+      ...proj,
+      fundoDuplo: { ...(proj.fundoDuplo ?? { ativo: false }), [chave]: valor },
+    }));
+  }
+
   function setTeto<K extends keyof TetoProjeto>(
     chave: K,
     valor: TetoProjeto[K],
@@ -321,7 +332,62 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
       </Card>
 
       <Card
-        title="Bloco 2 — Teto"
+        title="Bloco 2b — Fundo duplo (opcional)"
+        subtitle="Segundo fundo interno instalado acima do fundo externo. Dimensionado igual ao fundo principal."
+      >
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={projeto.fundoDuplo?.ativo ?? false}
+            onChange={(e) => setFundoDuplo("ativo", e.target.checked)}
+            className="h-4 w-4 accent-verde"
+          />
+          <span className="font-medium">Incluir fundo duplo</span>
+        </label>
+        {(projeto.fundoDuplo?.ativo ?? false) && (
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-3 md:grid-cols-4">
+              <SelectField
+                label="Largura — Fundo duplo"
+                value={projeto.fundoDuplo?.larguraChapa_mm ?? (p.larguraChapaFundo_mm ?? p.larguraChapa_mm)}
+                onChange={(v) => setFundoDuplo("larguraChapa_mm", Number(v))}
+                options={[
+                  { value: 1200, label: "1.200 mm" },
+                  { value: 1500, label: "1.500 mm" },
+                  { value: 2000, label: "2.000 mm" },
+                  { value: 2440, label: "2.440 mm" },
+                ]}
+              />
+              <SelectField
+                label="Comprimento — Fundo duplo"
+                value={projeto.fundoDuplo?.comprimentoChapa_mm ?? (p.comprimentoChapaFundo_mm ?? p.comprimentoChapa_mm)}
+                onChange={(v) => setFundoDuplo("comprimentoChapa_mm", Number(v))}
+                options={[
+                  { value: 6000, label: "6.000 mm" },
+                  { value: 12000, label: "12.000 mm" },
+                ]}
+              />
+              <NumberField
+                label="CA — Fundo duplo"
+                unit="mm"
+                value={projeto.fundoDuplo?.CA_mm ?? (p.CA_fundo_mm ?? p.CA_mm)}
+                onChange={(v) => setFundoDuplo("CA_mm", v)}
+                step={0.5}
+                min={0}
+                max={6}
+                hint="CA aplicada no fundo duplo. Default = CA do fundo externo."
+              />
+            </div>
+            <div className="rounded-md border border-verde-200 bg-verde-50 p-2 text-xs text-carbono-700">
+              <strong>Fundo duplo:</strong> espessura calculada igual ao fundo externo. A área utilizada
+              é a mesma do fundo. Quantitativo de chapas calculado na aba <em>Materiais</em>.
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card
+        title="Bloco 3 — Teto"
         subtitle="Tipo construtivo do teto. Cônico autoportante é o mais comum em tanques pequenos a médios."
       >
         <div className="grid gap-3 md:grid-cols-3">
@@ -400,7 +466,7 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
         </div>
       </Card>
 
-      <Card title="Bloco 4 — Selo flutuante (opcional)">
+      <Card title="Bloco 4 — Selo flutuante (opcional)" subtitle="Vedação flutuante interna que reduz emissões de vapores.">
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

@@ -187,7 +187,8 @@ export function calcularCostadoVDP(entrada: EntradaCostado): ResultadoCostadoVDP
           unidade: "mm",
           justificativa: (() => {
             const t_struct = e_calc - entrada.CA_mm;
-            const ca_efetivo = chapa.espessura - Math.max(t_struct, e_min_nominal - entrada.CA_mm);
+            // CA efetivo = placa adotada − espessura estrutural calculada
+            const ca_efetivo = chapa.espessura - t_struct;
             const base = e_calc < e_min_nominal
               ? `Mínimo nominal ${e_min_nominal} mm prevalece`
               : `Chapa ${chapa.polegada}" (${chapa.espessura} mm)`;

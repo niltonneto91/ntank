@@ -29,12 +29,17 @@ export default function ProjetoMateriaisPage({ params }: PageProps) {
           (v) => v.metodo === estado.projeto.variantePreferida,
         ) ?? comp.recomendada;
       const p = estado.projeto.parametros;
+      const fd = estado.projeto.fundoDuplo;
       const lista = calcularListaMateriais({
         resultado: variante.resultado,
         larguraChapaFundo_mm:     p.larguraChapaFundo_mm,
         comprimentoChapaFundo_mm: p.comprimentoChapaFundo_mm,
         larguraChapaTeto_mm:      p.larguraChapaTeto_mm,
         comprimentoChapaTeto_mm:  p.comprimentoChapaTeto_mm,
+        fundoDuploAtivo:             fd?.ativo ?? false,
+        larguraChapaFundoDuplo_mm:   fd?.larguraChapa_mm,
+        comprimentoChapaFundoDuplo_mm: fd?.comprimentoChapa_mm,
+        CA_fundoDuplo_mm:            fd?.CA_mm,
       });
       return { variante, lista };
     } catch (e) {
@@ -79,8 +84,12 @@ export default function ProjetoMateriaisPage({ params }: PageProps) {
     grupos[item.componente]!.push(item);
   }
 
-  const corBadge = (comp: string) =>
-    comp === "Costado" ? "carbono" : comp === "Fundo" ? "info" : "amarelo";
+  const corBadge = (comp: string) => {
+    if (comp === "Costado") return "carbono";
+    if (comp === "Fundo") return "info";
+    if (comp === "Fundo Duplo") return "verde";
+    return "amarelo"; // Teto
+  };
 
   return (
     <div className="space-y-5">

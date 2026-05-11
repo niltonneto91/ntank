@@ -71,9 +71,12 @@ function selecionarPerfilViga(vao_m: number): SelecaoPerfil {
   return { perfil: "UPN 300", kg_por_m: 46.2 };
 }
 
-/** Determina quantas colunas internas são necessárias em função de D. */
+/** Determina quantas colunas internas são necessárias em função de D.
+ *  Regra NTN: sempre usar pelo menos 1 tubo central (coluna de apoio).
+ *  Para D ≥ 18 m: 1 central + 1 a cada 6 m adicionais.
+ */
 function quantidadeColunas(D_m: number): number {
-  if (D_m < D_LIMITE_COLUNA_M) return 0;
+  if (D_m < D_LIMITE_COLUNA_M) return 1; // 1 tubo central sempre
   if (D_m < 18) return 1;
   // Acima de 18 m: 1 central + 1 a cada 6 m adicionais
   return 1 + Math.ceil((D_m - 18) / 6);
@@ -99,7 +102,10 @@ export function calcularTetoConicoSuportado(
   const cosTheta = Math.cos(angulo_rad);
 
   const e_calc = E_CHAPA_MIN_NOMINAL_MM + entrada.CA_mm;
-  const chapa = selecionarChapaComercial(e_calc);
+  // Mínimo nominal de 5 mm: não existe chapa de 5 mm no mercado.
+  // Usar 4,75 mm (3/16") como base estrutural (mesmo padrão do costado).
+  const e_para_comercial = 4.75 + entrada.CA_mm;
+  const chapa = selecionarChapaComercial(e_para_comercial);
 
   // Área usa D_teto (diâmetro externo) para massa correta
   const area_m2 = (Math.PI * D_teto_m * D_teto_m) / (4 * cosTheta);

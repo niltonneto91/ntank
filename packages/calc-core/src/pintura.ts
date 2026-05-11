@@ -85,8 +85,8 @@ export function calcularPintura(
   // Área do teto (superfície externa)
   const areaTeto_m2 = resultado.teto.area_m2;
 
-  // Acessórios: estimativa por massa (0,05 m²/kg — superfície de perfis estruturais leves)
-  const areaAcessorios_m2 = resultado.pesoAcessorios_kg * 0.05;
+  // Acessórios: 20% da soma das áreas do costado e teto (escadas, plataformas, guarda-corpos)
+  const areaAcessorios_m2 = (areaCostado_m2 + areaTeto_m2) * 0.20;
 
   const areaTotalPintavel_m2 =
     areaCostado_m2 + areaTeto_m2 + areaAcessorios_m2;

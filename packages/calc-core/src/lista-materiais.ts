@@ -15,7 +15,7 @@ import type { ResultadoTanqueCompleto } from "./types.js";
 
 export interface ItemListaMateriais {
   /** Componente de origem. */
-  readonly componente: "Costado" | "Fundo" | "Teto";
+  readonly componente: "Costado" | "Fundo" | "Fundo Duplo" | "Teto";
   readonly espessura_mm: number;
   readonly polegada: string;
   readonly largura_mm: number;
@@ -44,6 +44,14 @@ export interface EntradaListaMateriais {
   readonly larguraChapaTeto_mm?: number;
   /** Comprimento da chapa de teto (mm). Default = comprimento do costado. */
   readonly comprimentoChapaTeto_mm?: number;
+  /** Fundo duplo ativo? */
+  readonly fundoDuploAtivo?: boolean;
+  /** Largura da chapa do fundo duplo (mm). Default = larguraChapaFundo_mm. */
+  readonly larguraChapaFundoDuplo_mm?: number;
+  /** Comprimento da chapa do fundo duplo (mm). Default = comprimentoChapaFundo_mm. */
+  readonly comprimentoChapaFundoDuplo_mm?: number;
+  /** CA do fundo duplo (mm). Default = CA do fundo (resultado.fundo.entrada.CA_mm). */
+  readonly CA_fundoDuplo_mm?: number;
 }
 
 // ─── Cálculo ──────────────────────────────────────────────────────────────────
@@ -59,23 +67,27 @@ export function calcularListaMateriais(
   const comprFundo = entrada.comprimentoChapaFundo_mm ?? comprCostado;
   const largTeto   = entrada.larguraChapaTeto_mm     ?? largCostado;
   const comprTeto  = entrada.comprimentoChapaTeto_mm  ?? comprCostado;
+  const largFD     = entrada.larguraChapaFundoDuplo_mm    ?? largFundo;
+  const comprFD    = entrada.comprimentoChapaFundoDuplo_mm ?? comprFundo;
 
   const itens: ItemListaMateriais[] = [];
 
   // ── Costado ─────────────────────────────────────────────────────────────────
   for (const { chapa, quantidade } of resultado.costado.listaChapas) {
     const areaUn = (largCostado / 1_000) * (comprCostado / 1_000);
+    // chapasPorAnel é float (π×D/L); arredonda para cima para quantidade inteira de chapas
+    const qtdeCostado = Math.ceil(quantidade);
     itens.push({
       componente:     "Costado",
       espessura_mm:   chapa.espessura,
       polegada:       chapa.polegada,
       largura_mm:     largCostado,
       comprimento_mm: comprCostado,
-      quantidade,
+      quantidade:     qtdeCostado,
       areaUnitaria_m2: Number(areaUn.toFixed(4)),
-      areaTotal_m2:    Number((areaUn * quantidade).toFixed(3)),
+      areaTotal_m2:    Number((areaUn * qtdeCostado).toFixed(3)),
       pesoPorM2_kg:    chapa.pesoPorM2,
-      pesoTotal_kg:    Number((chapa.pesoPorM2 * areaUn * quantidade).toFixed(1)),
+      pesoTotal_kg:    Number((chapa.pesoPorM2 * areaUn * qtdeCostado).toFixed(1)),
     });
   }
 
@@ -121,6 +133,26 @@ export function calcularListaMateriais(
       areaTotal_m2:    Number((areaUn * qtde).toFixed(3)),
       pesoPorM2_kg:    Number(pesoM2.toFixed(1)),
       pesoTotal_kg:    Number((pesoM2 * areaUn * qtde).toFixed(1)),
+    });
+  }
+
+  // ── Fundo duplo (se ativo) ───────────────────────────────────────────────────
+  if (entrada.fundoDuploAtivo) {
+    // Mesma espessura e área do fundo principal; CA pode diferir.
+    const chapaFD = resultado.fundo.chapaComercial;
+    const areaUn  = (largFD / 1_000) * (comprFD / 1_000);
+    const qtde    = Math.ceil((resultado.fundo.area_m2 / areaUn) * 1.15);
+    itens.push({
+      componente:      "Fundo Duplo",
+      espessura_mm:    chapaFD.espessura,
+      polegada:        chapaFD.polegada,
+      largura_mm:      largFD,
+      comprimento_mm:  comprFD,
+      quantidade:      qtde,
+      areaUnitaria_m2: Number(areaUn.toFixed(4)),
+      areaTotal_m2:    Number((areaUn * qtde).toFixed(3)),
+      pesoPorM2_kg:    chapaFD.pesoPorM2,
+      pesoTotal_kg:    Number((chapaFD.pesoPorM2 * areaUn * qtde).toFixed(1)),
     });
   }
 

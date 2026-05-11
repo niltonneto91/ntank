@@ -145,7 +145,7 @@ export function calcularSoldagem(
   const cT = (entrada.comprimentoChapaTeto_mm  ?? resultado.costado.entrada.comprimentoChapa_mm) / 1_000;
 
   // ── 1. COSTADO ──────────────────────────────────────────────────────────────
-  const D_m     = resultado.costado.entrada.D_mm / 1_000;
+  const D_m     = resultado.costado.entrada.D_mm / 1_000; // diâmetro nominal (m)
   const compr_m = resultado.costado.entrada.comprimentoChapa_mm / 1_000;
   const n_chapas = Math.ceil((Math.PI * D_m) / compr_m);
   const circ_m   = Math.PI * D_m;
@@ -188,34 +188,71 @@ export function calcularSoldagem(
   const costadoComp = construirComponente("Costado", processos.costado, juntasCostado);
 
   // ── 2. FUNDO ────────────────────────────────────────────────────────────────
+  // Lógica: n_chapas × perímetro_chapa + 2 × perímetro (interno + externo)
+  //
+  // Cada chapa tem 4 lados; somar o perímetro de todas as chapas dá a estimativa
+  // do comprimento total das juntas internas (inclui sobreposições, portanto
+  // compatível com a prática de medição de solda em campo).
+  // O rodapé (filete chapa-costado) é executado por dentro E por fora → × 2.
   const aF  = resultado.fundo.area_m2;
   const eF  = resultado.fundo.e_adotada_mm;
-  const LjF = aF / lF + aF / cF;
   const AF  = secaoTransversal(eF, "filete");
-  const fundoComp = construirComponente("Fundo", processos.fundo, [{
-    descricao:      `Fundo — filete sobreposto (chapa ${lF * 1000}×${cF * 1000} mm)`,
-    tipoJunta:      "filete",
-    espessura_mm:   eF,
-    comprimento_m:  Number(LjF.toFixed(2)),
-    areaSeccao_mm2: Number(AF.toFixed(2)),
-    volume_cm3:     Number((AF * LjF).toFixed(2)),
-    pesoMetal_kg:   Number(pesoMetal(AF, LjF).toFixed(3)),
-  }]);
+
+  const n_chapas_fundo = Math.ceil((aF / (lF * cF)) * 1.15);
+  const L_juntas_fundo = n_chapas_fundo * 2 * (lF + cF);
+  const L_perim_fundo  = Math.PI * D_m * 2; // interno + externo
+
+  const fundoComp = construirComponente("Fundo", processos.fundo, [
+    {
+      descricao:      `Fundo — juntas entre chapas (${n_chapas_fundo} chapas ${lF * 1000}×${cF * 1000} mm)`,
+      tipoJunta:      "filete",
+      espessura_mm:   eF,
+      comprimento_m:  Number(L_juntas_fundo.toFixed(2)),
+      areaSeccao_mm2: Number(AF.toFixed(2)),
+      volume_cm3:     Number((AF * L_juntas_fundo).toFixed(2)),
+      pesoMetal_kg:   Number(pesoMetal(AF, L_juntas_fundo).toFixed(3)),
+    },
+    {
+      descricao:      `Fundo — junta perimetral rodapé (interno + externo, π × ${D_m.toFixed(3)} m × 2)`,
+      tipoJunta:      "filete",
+      espessura_mm:   eF,
+      comprimento_m:  Number(L_perim_fundo.toFixed(2)),
+      areaSeccao_mm2: Number(AF.toFixed(2)),
+      volume_cm3:     Number((AF * L_perim_fundo).toFixed(2)),
+      pesoMetal_kg:   Number(pesoMetal(AF, L_perim_fundo).toFixed(3)),
+    },
+  ]);
 
   // ── 3. TETO ─────────────────────────────────────────────────────────────────
+  // Mesma lógica do fundo: n_chapas × perímetro_chapa + 2 × perímetro
   const aT  = resultado.teto.area_m2;
   const eT  = resultado.teto.e_adotada_mm;
-  const LjT = aT / lT + aT / cT;
   const AT  = secaoTransversal(eT, "filete");
-  const tetoComp = construirComponente("Teto", processos.teto, [{
-    descricao:      `Teto — filete sobreposto (chapa ${lT * 1000}×${cT * 1000} mm)`,
-    tipoJunta:      "filete",
-    espessura_mm:   eT,
-    comprimento_m:  Number(LjT.toFixed(2)),
-    areaSeccao_mm2: Number(AT.toFixed(2)),
-    volume_cm3:     Number((AT * LjT).toFixed(2)),
-    pesoMetal_kg:   Number(pesoMetal(AT, LjT).toFixed(3)),
-  }]);
+
+  const n_chapas_teto = Math.ceil((aT / (lT * cT)) * 1.15);
+  const L_juntas_teto = n_chapas_teto * 2 * (lT + cT);
+  const L_perim_teto  = Math.PI * D_m * 2; // interno + externo
+
+  const tetoComp = construirComponente("Teto", processos.teto, [
+    {
+      descricao:      `Teto — juntas entre chapas (${n_chapas_teto} chapas ${lT * 1000}×${cT * 1000} mm)`,
+      tipoJunta:      "filete",
+      espessura_mm:   eT,
+      comprimento_m:  Number(L_juntas_teto.toFixed(2)),
+      areaSeccao_mm2: Number(AT.toFixed(2)),
+      volume_cm3:     Number((AT * L_juntas_teto).toFixed(2)),
+      pesoMetal_kg:   Number(pesoMetal(AT, L_juntas_teto).toFixed(3)),
+    },
+    {
+      descricao:      `Teto — junta perimetral (interno + externo, π × ${D_m.toFixed(3)} m × 2)`,
+      tipoJunta:      "filete",
+      espessura_mm:   eT,
+      comprimento_m:  Number(L_perim_teto.toFixed(2)),
+      areaSeccao_mm2: Number(AT.toFixed(2)),
+      volume_cm3:     Number((AT * L_perim_teto).toFixed(2)),
+      pesoMetal_kg:   Number(pesoMetal(AT, L_perim_teto).toFixed(3)),
+    },
+  ]);
 
   // ── 4. ACESSÓRIOS ────────────────────────────────────────────────────────────
   const pesoAces = resultado.pesoAcessorios_kg;

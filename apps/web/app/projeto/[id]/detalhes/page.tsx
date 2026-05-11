@@ -784,10 +784,17 @@ export default function ProjetoDetalhesPage({ params }: PageProps) {
               {brl(t.pesoTotal_kg * (projeto.parametros.custoMaoDeObraPorKg_R$ ?? PARAMETROS_DEFAULT.custoMaoDeObraPorKg_R$))}
             </dd>
           </div>
-          <div className="md:col-span-2 rounded-md bg-verde p-3">
-            <dt className="text-xs font-bold uppercase tracking-wider text-carbono">Custo total estimado (aço + MO)</dt>
-            <dd className="font-title text-2xl font-bold tabular text-carbono">
+          <div className="md:col-span-2 rounded-md bg-verde p-3 flex flex-col gap-1">
+            <dt className="text-xs font-bold uppercase tracking-wider text-carbono">
+              Custo total estimado (aço + Mão de obra)
+            </dt>
+            <dd className="font-title text-3xl font-bold tabular text-carbono leading-tight">
               {brl(t.custo_R$ + t.pesoTotal_kg * (projeto.parametros.custoMaoDeObraPorKg_R$ ?? PARAMETROS_DEFAULT.custoMaoDeObraPorKg_R$))}
+            </dd>
+            <dd className="text-xs text-carbono-700 tabular">
+              Aço: {brl(t.custo_R$)} ({brl(projeto.parametros.custoAcoPorKg_R$)}/kg) ·{" "}
+              MO: {brl(t.pesoTotal_kg * (projeto.parametros.custoMaoDeObraPorKg_R$ ?? PARAMETROS_DEFAULT.custoMaoDeObraPorKg_R$))} ({brl(projeto.parametros.custoMaoDeObraPorKg_R$ ?? PARAMETROS_DEFAULT.custoMaoDeObraPorKg_R$)}/kg) ·{" "}
+              Total: {Math.round(t.pesoTotal_kg).toLocaleString("pt-BR")} kg
             </dd>
           </div>
         </dl>

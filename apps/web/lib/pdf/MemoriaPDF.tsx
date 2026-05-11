@@ -21,11 +21,18 @@ import {
   Text,
   View,
 } from "@react-pdf/renderer";
+import {
+  calcularListaMateriais,
+  calcularSoldagem,
+  calcularPintura,
+  PROCESSOS_SOLDAGEM,
+} from "@ntank/calc-core";
 import type {
   ResultadoCalculo,
   ResultadoTanqueCompleto,
 } from "@ntank/calc-core";
 import type { ProjetoNTANK } from "@/lib/projeto";
+import { SOLDAGEM_DEFAULT, PINTURA_DEFAULT } from "@/lib/projeto";
 
 const VERDE = "#ADD91C";
 const PRETO = "#0A0A0A";
@@ -418,6 +425,48 @@ export function MemoriaPDF({
   const D_m = projeto.geometria.D_m;
   const H_m = projeto.geometria.H_m;
   const volume_m3 = (Math.PI * D_m * D_m * H_m) / 4;
+
+  // ── Dados para os Anexos ────────────────────────────────────────────────────
+  const _p  = projeto.parametros;
+  const _fd = projeto.fundoDuplo;
+  const _s  = projeto.soldagem  ?? SOLDAGEM_DEFAULT;
+  const _pin = projeto.pintura  ?? PINTURA_DEFAULT;
+
+  const listaMateriais = calcularListaMateriais({
+    resultado,
+    larguraChapaFundo_mm:           _p.larguraChapaFundo_mm,
+    comprimentoChapaFundo_mm:       _p.comprimentoChapaFundo_mm,
+    larguraChapaTeto_mm:            _p.larguraChapaTeto_mm,
+    comprimentoChapaTeto_mm:        _p.comprimentoChapaTeto_mm,
+    fundoDuploAtivo:                _fd?.ativo ?? false,
+    larguraChapaFundoDuplo_mm:      _fd?.larguraChapa_mm,
+    comprimentoChapaFundoDuplo_mm:  _fd?.comprimentoChapa_mm,
+    CA_fundoDuplo_mm:               _fd?.CA_mm,
+  });
+
+  const resultadoSoldagem = calcularSoldagem({
+    resultado,
+    larguraChapaFundo_mm:     _p.larguraChapaFundo_mm,
+    comprimentoChapaFundo_mm: _p.comprimentoChapaFundo_mm,
+    larguraChapaTeto_mm:      _p.larguraChapaTeto_mm,
+    comprimentoChapaTeto_mm:  _p.comprimentoChapaTeto_mm,
+    processos: {
+      costado:    _s.processoCostado,
+      fundo:      _s.processoFundo,
+      teto:       _s.processoTeto,
+      acessorios: _s.processoAcessorios,
+    },
+  });
+
+  const resultadoPintura = calcularPintura({
+    resultado,
+    config: {
+      plano:         _pin.plano,
+      primer:        _pin.primer,
+      intermediario: _pin.intermediario,
+      acabamento:    _pin.acabamento,
+    },
+  });
 
   return (
     <Document
@@ -1263,6 +1312,285 @@ export function MemoriaPDF({
         <Rodape />
       </Page>
 
+      {/* ======================= ANEXO 1 — CHAPAS ========================== */}
+      <Page size="A4" style={styles.page}>
+        <Cabecalho projeto={projeto} />
+
+        {/* Cabeçalho do Anexo */}
+        <View style={{ backgroundColor: PRETO, padding: 10, marginBottom: 14 }}>
+          <Text style={{ color: VERDE, fontSize: 8, letterSpacing: 1.5, fontFamily: "Helvetica-Bold" }}>
+            ANEXO 1
+          </Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 18, fontFamily: "Helvetica-Bold", marginTop: 2 }}>
+            Quantitativo de Chapas
+          </Text>
+        </View>
+
+        {/* Resumo */}
+        <View style={{ flexDirection: "row", marginBottom: 12, gap: 6 }}>
+          <View style={{ flex: 1, backgroundColor: CREME, padding: 8 }}>
+            <Text style={{ fontSize: 7, color: CARBONO_500, textTransform: "uppercase", letterSpacing: 0.8 }}>Total de chapas</Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 16, marginTop: 2 }}>{listaMateriais.totalChapas} un</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: CREME, padding: 8 }}>
+            <Text style={{ fontSize: 7, color: CARBONO_500, textTransform: "uppercase", letterSpacing: 0.8 }}>Área total comprada</Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 16, marginTop: 2 }}>{fmtNum(listaMateriais.totalArea_m2)} m²</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: VERDE, padding: 8 }}>
+            <Text style={{ fontSize: 7, color: PRETO, textTransform: "uppercase", letterSpacing: 0.8, fontFamily: "Helvetica-Bold" }}>Peso total de chapas</Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 16, marginTop: 2, color: PRETO }}>{fmtNum(listaMateriais.totalPeso_kg, 1)} kg</Text>
+          </View>
+        </View>
+
+        {/* Tabela de chapas */}
+        <View style={styles.tabela}>
+          <View style={styles.tabelaHeader}>
+            <Text style={{ width: 70, fontSize: 8, color: VERDE }}>Componente</Text>
+            <Text style={{ width: 72, fontSize: 8, color: VERDE }}>Nominal (pol)</Text>
+            <Text style={{ width: 38, fontSize: 8, textAlign: "right", color: VERDE }}>Esp mm</Text>
+            <Text style={{ width: 36, fontSize: 8, textAlign: "right", color: VERDE }}>Larg mm</Text>
+            <Text style={{ width: 40, fontSize: 8, textAlign: "right", color: VERDE }}>Compr mm</Text>
+            <Text style={{ width: 30, fontSize: 8, textAlign: "right", color: VERDE }}>Qtde</Text>
+            <Text style={{ width: 44, fontSize: 8, textAlign: "right", color: VERDE }}>Área un m²</Text>
+            <Text style={{ width: 44, fontSize: 8, textAlign: "right", color: VERDE }}>Área tot m²</Text>
+            <Text style={{ flex: 1, fontSize: 8, textAlign: "right", color: VERDE }}>Peso kg</Text>
+          </View>
+          {listaMateriais.itens.map((item, idx) => (
+            <View key={idx} style={idx % 2 === 1 ? [styles.tabelaLinha, styles.tabelaLinhaAlt] : styles.tabelaLinha}>
+              <Text style={{ width: 70, fontSize: 8 }}>{item.componente}</Text>
+              <Text style={{ width: 72, fontSize: 8 }}>
+                {item.polegada.includes("mm") ? item.polegada : `${item.polegada}"`}
+              </Text>
+              <Text style={{ width: 38, fontSize: 8, textAlign: "right" }}>{fmtNum(item.espessura_mm, 2)}</Text>
+              <Text style={{ width: 36, fontSize: 8, textAlign: "right" }}>{item.largura_mm}</Text>
+              <Text style={{ width: 40, fontSize: 8, textAlign: "right" }}>{item.comprimento_mm}</Text>
+              <Text style={{ width: 30, fontSize: 8, textAlign: "right", fontFamily: "Helvetica-Bold" }}>{item.quantidade}</Text>
+              <Text style={{ width: 44, fontSize: 8, textAlign: "right" }}>{fmtNum(item.areaUnitaria_m2, 3)}</Text>
+              <Text style={{ width: 44, fontSize: 8, textAlign: "right" }}>{fmtNum(item.areaTotal_m2, 2)}</Text>
+              <Text style={{ flex: 1, fontSize: 8, textAlign: "right", fontFamily: "Helvetica-Bold" }}>{fmtNum(item.pesoTotal_kg, 1)}</Text>
+            </View>
+          ))}
+          <View style={{ flexDirection: "row", backgroundColor: PRETO, paddingVertical: 5, paddingHorizontal: 4 }}>
+            <Text style={{ flex: 1, fontSize: 8, color: VERDE, fontFamily: "Helvetica-Bold" }}>TOTAL GERAL</Text>
+            <Text style={{ fontSize: 8, color: VERDE, fontFamily: "Helvetica-Bold" }}>
+              {listaMateriais.totalChapas} un  ·  {fmtNum(listaMateriais.totalArea_m2)} m²  ·  {fmtNum(listaMateriais.totalPeso_kg, 1)} kg
+            </Text>
+          </View>
+        </View>
+
+        <Text style={{ fontSize: 7, color: CARBONO_500, marginTop: 4 }}>
+          Costado: aproveitamento exato por anel (π × D / comprimento, arredondado para cima).
+          Fundo e Teto: fator 1,15 (15% de perda no corte circular). Fundo Duplo: mesma área do fundo externo.
+        </Text>
+
+        <Rodape />
+      </Page>
+
+      {/* ======================= ANEXO 2 — SOLDAGEM ======================== */}
+      <Page size="A4" style={styles.page}>
+        <Cabecalho projeto={projeto} />
+
+        {/* Cabeçalho do Anexo */}
+        <View style={{ backgroundColor: PRETO, padding: 10, marginBottom: 14 }}>
+          <Text style={{ color: VERDE, fontSize: 8, letterSpacing: 1.5, fontFamily: "Helvetica-Bold" }}>
+            ANEXO 2
+          </Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 18, fontFamily: "Helvetica-Bold", marginTop: 2 }}>
+            Quantitativo de Soldagem
+          </Text>
+        </View>
+
+        {/* Juntas por componente */}
+        {resultadoSoldagem.componentes.map((comp, ci) => (
+          <View key={ci} style={{ marginBottom: 10 }}>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 10, color: PRETO, marginBottom: 4 }}>
+              {comp.componente} — {PROCESSOS_SOLDAGEM[comp.processo].nome}
+            </Text>
+            <View style={styles.tabela}>
+              <View style={styles.tabelaHeader}>
+                <Text style={{ flex: 1, fontSize: 8, color: VERDE }}>Junta / Descrição</Text>
+                <Text style={{ width: 70, fontSize: 8, color: VERDE }}>Tipo</Text>
+                <Text style={{ width: 34, fontSize: 8, textAlign: "right", color: VERDE }}>Esp mm</Text>
+                <Text style={{ width: 48, fontSize: 8, textAlign: "right", color: VERDE }}>Compr m</Text>
+                <Text style={{ width: 48, fontSize: 8, textAlign: "right", color: VERDE }}>Peso kg</Text>
+              </View>
+              {comp.juntas.map((j, ji) => (
+                <View key={ji} style={ji % 2 === 1 ? [styles.tabelaLinha, styles.tabelaLinhaAlt] : styles.tabelaLinha}>
+                  <Text style={{ flex: 1, fontSize: 8 }}>{j.descricao}</Text>
+                  <Text style={{ width: 70, fontSize: 8 }}>{labelJuntaPDF(j.tipoJunta)}</Text>
+                  <Text style={{ width: 34, fontSize: 8, textAlign: "right" }}>{fmtNum(j.espessura_mm, 1)}</Text>
+                  <Text style={{ width: 48, fontSize: 8, textAlign: "right" }}>{fmtNum(j.comprimento_m, 2)}</Text>
+                  <Text style={{ width: 48, fontSize: 8, textAlign: "right", fontFamily: "Helvetica-Bold" }}>{fmtNum(j.pesoMetal_kg, 3)}</Text>
+                </View>
+              ))}
+              <View style={{ flexDirection: "row", backgroundColor: CARBONO_100, paddingVertical: 4, paddingHorizontal: 4 }}>
+                <Text style={{ flex: 1, fontSize: 8, color: CARBONO_700, fontFamily: "Helvetica-Bold" }}>
+                  Subtotal {comp.componente}
+                </Text>
+                <Text style={{ width: 48, fontSize: 8, textAlign: "right", fontFamily: "Helvetica-Bold" }}>
+                  {fmtNum(comp.totalComprimento_m, 1)} m
+                </Text>
+                <Text style={{ width: 48, fontSize: 8, textAlign: "right", fontFamily: "Helvetica-Bold" }}>
+                  {fmtNum(comp.totalPesoMetal_kg, 2)} kg
+                </Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 7, color: CARBONO_500 }}>
+              Consumível ({comp.processo}): {fmtNum(comp.consumivel.material_kg, 2)} kg de eletrodo/arame
+              {comp.consumivel.gas_m3 > 0 ? `  ·  ${fmtNum(comp.consumivel.gas_m3, 2)} m³ gás proteção` : "  (sem gás)"}
+            </Text>
+          </View>
+        ))}
+
+        {/* Resumo global de consumíveis */}
+        <View style={{ backgroundColor: CREME, padding: 10, marginTop: 8, borderLeftColor: VERDE, borderLeftWidth: 3 }}>
+          <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9, marginBottom: 8 }}>
+            Resumo de Consumíveis — Corte e Preparação
+          </Text>
+          <View style={{ flexDirection: "row", gap: 6 }}>
+            <View style={{ flex: 1, backgroundColor: "#FFFFFF", padding: 6 }}>
+              <Text style={{ fontSize: 7, color: CARBONO_500 }}>Total peso metal solda</Text>
+              <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 13 }}>
+                {fmtNum(resultadoSoldagem.totalPesoMetal_kg, 1)} kg
+              </Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: "#FFFFFF", padding: 6 }}>
+              <Text style={{ fontSize: 7, color: CARBONO_500 }}>Discos de corte/desbaste</Text>
+              <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 13 }}>
+                {resultadoSoldagem.discos_un} un
+              </Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: "#FFFFFF", padding: 6 }}>
+              <Text style={{ fontSize: 7, color: CARBONO_500 }}>O₂ (oxicorte)</Text>
+              <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 13 }}>
+                {fmtNum(resultadoSoldagem.oxigenio_kg, 1)} kg
+              </Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: "#FFFFFF", padding: 6 }}>
+              <Text style={{ fontSize: 7, color: CARBONO_500 }}>Acetileno</Text>
+              <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 13 }}>
+                {fmtNum(resultadoSoldagem.acetileno_m3, 1)} m³
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <Rodape />
+      </Page>
+
+      {/* ======================= ANEXO 3 — PINTURA ========================= */}
+      <Page size="A4" style={styles.page}>
+        <Cabecalho projeto={projeto} />
+
+        {/* Cabeçalho do Anexo */}
+        <View style={{ backgroundColor: PRETO, padding: 10, marginBottom: 14 }}>
+          <Text style={{ color: VERDE, fontSize: 8, letterSpacing: 1.5, fontFamily: "Helvetica-Bold" }}>
+            ANEXO 3
+          </Text>
+          <Text style={{ color: "#FFFFFF", fontSize: 18, fontFamily: "Helvetica-Bold", marginTop: 2 }}>
+            Quantitativo de Pintura
+          </Text>
+        </View>
+
+        {/* Áreas pintáveis */}
+        <Text style={styles.h3}>Áreas pintáveis</Text>
+        <View style={styles.tabela}>
+          <View style={styles.tabelaHeader}>
+            <Text style={{ flex: 1, fontSize: 8, color: VERDE }}>Superfície</Text>
+            <Text style={{ width: 80, fontSize: 8, textAlign: "right", color: VERDE }}>Área (m²)</Text>
+          </View>
+          {[
+            { label: "Costado (externo)",   val: resultadoPintura.areaCostado_m2   },
+            { label: "Teto (externo)",       val: resultadoPintura.areaTeto_m2     },
+            { label: "Acessórios — 20% de (Costado + Teto)", val: resultadoPintura.areaAcessorios_m2 },
+          ].map(({ label, val }, i) => (
+            <View key={label} style={i % 2 === 1 ? [styles.tabelaLinha, styles.tabelaLinhaAlt] : styles.tabelaLinha}>
+              <Text style={{ flex: 1, fontSize: 8 }}>{label}</Text>
+              <Text style={{ width: 80, fontSize: 8, textAlign: "right" }}>{fmtNum(val, 2)}</Text>
+            </View>
+          ))}
+          <View style={{ flexDirection: "row", backgroundColor: PRETO, paddingVertical: 4, paddingHorizontal: 4 }}>
+            <Text style={{ flex: 1, fontSize: 8, color: VERDE, fontFamily: "Helvetica-Bold" }}>TOTAL PINTÁVEL</Text>
+            <Text style={{ width: 80, fontSize: 8, textAlign: "right", color: VERDE, fontFamily: "Helvetica-Bold" }}>
+              {fmtNum(resultadoPintura.areaTotalPintavel_m2, 2)} m²
+            </Text>
+          </View>
+        </View>
+
+        {/* Plano de pintura */}
+        <Text style={[styles.h3, { marginTop: 12 }]}>
+          Plano de pintura — {resultadoPintura.demaos.length === 3 ? "3 demãos" : "2 demãos"}
+        </Text>
+        <View style={styles.tabela}>
+          <View style={styles.tabelaHeader}>
+            <Text style={{ flex: 1, fontSize: 8, color: VERDE }}>Demão</Text>
+            <Text style={{ width: 44, fontSize: 8, textAlign: "right", color: VERDE }}>Esp µm</Text>
+            <Text style={{ width: 56, fontSize: 8, textAlign: "right", color: VERDE }}>Rend m²/L</Text>
+            <Text style={{ width: 56, fontSize: 8, textAlign: "right", color: VERDE }}>Volume (L)</Text>
+            <Text style={{ width: 70, fontSize: 8, textAlign: "right", color: VERDE }}>Custo (R$)</Text>
+          </View>
+          {resultadoPintura.demaos.map((d, di) => (
+            <View key={di} style={di % 2 === 1 ? [styles.tabelaLinha, styles.tabelaLinhaAlt] : styles.tabelaLinha}>
+              <Text style={{ flex: 1, fontSize: 8 }}>{d.nome}</Text>
+              <Text style={{ width: 44, fontSize: 8, textAlign: "right" }}>{d.espessura_um}</Text>
+              <Text style={{ width: 56, fontSize: 8, textAlign: "right" }}>{fmtNum(d.rendimento_m2_L, 1)}</Text>
+              <Text style={{ width: 56, fontSize: 8, textAlign: "right", fontFamily: "Helvetica-Bold" }}>{fmtNum(d.volume_L, 1)}</Text>
+              <Text style={{ width: 70, fontSize: 8, textAlign: "right" }}>
+                {d.custo_R$ > 0 ? fmtBRL.format(d.custo_R$) : "—"}
+              </Text>
+            </View>
+          ))}
+          <View style={{ flexDirection: "row", backgroundColor: PRETO, paddingVertical: 4, paddingHorizontal: 4 }}>
+            <Text style={{ flex: 1, fontSize: 8, color: VERDE, fontFamily: "Helvetica-Bold" }}>TOTAL</Text>
+            <Text style={{ width: 44, fontSize: 8, color: VERDE }}></Text>
+            <Text style={{ width: 56, fontSize: 8, color: VERDE }}></Text>
+            <Text style={{ width: 56, fontSize: 8, textAlign: "right", color: VERDE, fontFamily: "Helvetica-Bold" }}>
+              {fmtNum(resultadoPintura.totalVolume_L, 1)} L
+            </Text>
+            <Text style={{ width: 70, fontSize: 8, textAlign: "right", color: VERDE, fontFamily: "Helvetica-Bold" }}>
+              {resultadoPintura.totalCusto_R$ > 0 ? fmtBRL.format(resultadoPintura.totalCusto_R$) : "—"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Caixas de resumo */}
+        <View style={{ flexDirection: "row", marginTop: 12, gap: 6 }}>
+          <View style={{ flex: 1, backgroundColor: CREME, padding: 8 }}>
+            <Text style={{ fontSize: 7, color: CARBONO_500, textTransform: "uppercase", letterSpacing: 0.8 }}>
+              Área total pintável
+            </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 18, marginTop: 2 }}>
+              {fmtNum(resultadoPintura.areaTotalPintavel_m2, 1)} m²
+            </Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: CREME, padding: 8 }}>
+            <Text style={{ fontSize: 7, color: CARBONO_500, textTransform: "uppercase", letterSpacing: 0.8 }}>
+              Volume total de tinta
+            </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 18, marginTop: 2 }}>
+              {fmtNum(resultadoPintura.totalVolume_L, 1)} L
+            </Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: VERDE, padding: 8 }}>
+            <Text style={{ fontSize: 7, color: PRETO, textTransform: "uppercase", letterSpacing: 0.8, fontFamily: "Helvetica-Bold" }}>
+              Custo estimado de tinta
+            </Text>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 16, marginTop: 2, color: PRETO }}>
+              {resultadoPintura.totalCusto_R$ > 0
+                ? fmtBRL.format(resultadoPintura.totalCusto_R$)
+                : "Informar R$/L"}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={{ fontSize: 7, color: CARBONO_500, marginTop: 8, lineHeight: 1.5 }}>
+          Fundo não pintado (apoiado na fundação). Rendimento a seco — acrescentar 10–15% por perdas de aplicação.
+          Custo calculado apenas quando R$/L informado na aba Pintura do projeto.
+        </Text>
+
+        <Rodape />
+      </Page>
+
       {/* ======================= CTA — NTN ENGENHARIA ====================== */}
       <Page size="A4" style={styles.pageCapa}>
         <View style={styles.capaTopo} />
@@ -1345,6 +1673,12 @@ export function MemoriaPDF({
       </Page>
     </Document>
   );
+}
+
+function labelJuntaPDF(tipo: string): string {
+  if (tipo === "topo-meio-v") return "Topo Meio-V 37°";
+  if (tipo === "topo-reto") return "Topo Reto";
+  return "Filete";
 }
 
 function rotuloFundo(tipo: string): string {
