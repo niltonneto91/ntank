@@ -1,21 +1,24 @@
+"use client";
+
 /**
  * Persistência IndexedDB dos projetos NTANK.
  *
  * Banco "ntank-db" — stores:
  *   "projetos"      → ProjetoNTANK (API 650 / API 653)
  *   "calc-api2000"  → ProjetoAPI2000 (ventilação — API 2000)
+ *   "calc-api2350"  → ProjetoAPI2350 (prevenção de transbordamento — API 2350)
  *
  * Histórico de versões:
  *   v1 — store "projetos" com índice "by-atualizado"
  *   v2 — adiciona índice "by-tipo" em "projetos" (Fase 0)
  *   v3 — adiciona store "calc-api2000" (Fase API 2000)
+ *   v4 — adiciona store "calc-api2350" (Fase API 2350)
  */
-
-"use client";
 
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { migrarProjeto, type ProjetoNTANK } from "./projeto";
 import type { ProjetoAPI2000 } from "./api2000-projeto";
+import type { ProjetoAPI2350 } from "./api2350-projeto";
 
 interface NtankDB extends DBSchema {
   projetos: {
@@ -33,10 +36,17 @@ interface NtankDB extends DBSchema {
       "by-atualizado": string;
     };
   };
+  "calc-api2350": {
+    key: string;
+    value: ProjetoAPI2350;
+    indexes: {
+      "by-atualizado": string;
+    };
+  };
 }
 
 const DB_NAME = "ntank-db";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let dbPromise: Promise<IDBPDatabase<NtankDB>> | null = null;
 
@@ -68,6 +78,14 @@ function getDB(): Promise<IDBPDatabase<NtankDB>> {
         if (oldVersion < 3) {
           if (!db.objectStoreNames.contains("calc-api2000")) {
             const s = db.createObjectStore("calc-api2000", { keyPath: "id" });
+            s.createIndex("by-atualizado", "atualizadoEm");
+          }
+        }
+
+        // v3 → v4: nova store "calc-api2350" para projetos API 2350
+        if (oldVersion < 4) {
+          if (!db.objectStoreNames.contains("calc-api2350")) {
+            const s = db.createObjectStore("calc-api2350", { keyPath: "id" });
             s.createIndex("by-atualizado", "atualizadoEm");
           }
         }
@@ -134,4 +152,32 @@ export async function salvarProjetoAPI2000(projeto: ProjetoAPI2000): Promise<voi
 export async function excluirProjetoAPI2000(id: string): Promise<void> {
   const db = await getDB();
   await db.delete("calc-api2000", id);
+}
+
+// ---------------------------------------------------------------------------
+// API 2350 / ProjetoAPI2350
+// ---------------------------------------------------------------------------
+
+export async function listarProjetosAPI2350(): Promise<ProjetoAPI2350[]> {
+  const db = await getDB();
+  const all = await db.getAllFromIndex("calc-api2350", "by-atualizado");
+  return all.reverse(); // mais recentes primeiro
+}
+
+export async function obterProjetoAPI2350(id: string): Promise<ProjetoAPI2350 | undefined> {
+  const db = await getDB();
+  return db.get("calc-api2350", id);
+}
+
+export async function salvarProjetoAPI2350(projeto: ProjetoAPI2350): Promise<void> {
+  const db = await getDB();
+  await db.put("calc-api2350", {
+    ...projeto,
+    atualizadoEm: new Date().toISOString(),
+  });
+}
+
+export async function excluirProjetoAPI2350(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete("calc-api2350", id);
 }

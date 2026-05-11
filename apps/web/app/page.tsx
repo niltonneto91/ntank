@@ -39,11 +39,11 @@ const MODULOS: ModuloCard[] = [
   },
   {
     norma: "API 2350",
-    titulo: "Proteção contra Transbordo",
+    titulo: "Prevenção de Transbordamento",
     descricao:
-      "Determinação das cotas de alarme de nível alto (HLA) e desligamento de segurança (HSSL) para prevenção de transbordamento.",
-    href: "#",
-    ativo: false,
+      "Classificação OPS (Cat 0–3), tempo e volume de resposta, verificação de níveis MW/HH/AOPS/CH. Memória de cálculo em PDF.",
+    href: "/api2350/novo",
+    ativo: true,
     icone: "🚨",
   },
   {
