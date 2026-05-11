@@ -217,6 +217,13 @@ export default function ProjetoMateriaisPage({ params }: PageProps) {
         </div>
       </Card>
 
+      <Card>
+        <p className="text-xs text-carbono-500">
+          <strong>Nota:</strong> Esta lista contempla apenas chapas de costado, fundo e teto.
+          Não estão incluídos: bocais, chapas de reforço e acessórios (escadas, plataformas, guarda-corpos).
+        </p>
+      </Card>
+
       <div className="flex justify-between">
         <Link href={`/projeto/${projeto.id}/detalhes`}>
           <Button variant="ghost">← Detalhes</Button>

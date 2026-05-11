@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { MATERIAIS } from "@ntank/calc-core";
 import { Card } from "@/components/Card";
@@ -10,6 +10,7 @@ import { NumberField, SelectField, TextField } from "@/components/Field";
 import { ProjetoHeader } from "@/components/ProjetoHeader";
 import { Stepper } from "@/components/Stepper";
 import { useProjeto } from "@/lib/useProjeto";
+import { listarProjetos } from "@/lib/db";
 import type {
   FundoDuploProjeto,
   FundoProjeto,
@@ -42,6 +43,19 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
 
   const { projeto } = estado;
   const { parametros: p, fundo, teto } = projeto;
+
+  // Pastas existentes nos outros projetos (para o dropdown de pasta)
+  const [pastasDisponiveis, setPastasDisponiveis] = useState<string[]>([]);
+  const [novaPastaInput, setNovaPastaInput] = useState("");
+  const [mostraNovaPasta, setMostraNovaPasta] = useState(false);
+  useEffect(() => {
+    listarProjetos().then((todos) => {
+      const pastas = [...new Set(todos.map((p) => p.pasta?.trim() ?? "").filter(Boolean))].sort(
+        (a, b) => a.localeCompare(b, "pt-BR"),
+      );
+      setPastasDisponiveis(pastas);
+    });
+  }, []);
 
   function setParam<K extends keyof typeof p>(chave: K, valor: (typeof p)[K]) {
     atualizar((proj) => ({
@@ -82,6 +96,68 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
     <div className="space-y-5">
       <ProjetoHeader projeto={projeto} />
       <Stepper projetoId={projeto.id} ativa="parametros" />
+
+      {/* Organização — Pasta */}
+      <Card title="Organização" subtitle="Agrupe este projeto em uma pasta para facilitar a navegação.">
+        <div className="flex flex-wrap gap-2 items-end">
+          <div className="flex-1 min-w-48">
+            <SelectField
+              label="Pasta"
+              value={projeto.pasta ?? ""}
+              onChange={(v) => {
+                if (v === "__nova__") {
+                  setMostraNovaPasta(true);
+                } else {
+                  atualizar((proj) => ({ ...proj, pasta: v || undefined }));
+                }
+              }}
+              options={[
+                { value: "", label: "Sem pasta" },
+                ...pastasDisponiveis.map((pasta) => ({ value: pasta, label: `📁 ${pasta}` })),
+                { value: "__nova__", label: "+ Criar nova pasta…" },
+              ]}
+            />
+          </div>
+          {mostraNovaPasta && (
+            <div className="flex gap-2 items-center flex-1 min-w-48">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Nome da nova pasta…"
+                value={novaPastaInput}
+                onChange={(e) => setNovaPastaInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && novaPastaInput.trim()) {
+                    const nome = novaPastaInput.trim();
+                    atualizar((proj) => ({ ...proj, pasta: nome }));
+                    setPastasDisponiveis((prev) =>
+                      [...new Set([...prev, nome])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+                    );
+                    setNovaPastaInput("");
+                    setMostraNovaPasta(false);
+                  }
+                  if (e.key === "Escape") setMostraNovaPasta(false);
+                }}
+                className="flex-1 rounded border border-carbono-300 bg-white px-3 py-2 text-sm outline-none focus:border-verde"
+              />
+              <Button
+                size="sm"
+                onClick={() => {
+                  const nome = novaPastaInput.trim();
+                  if (!nome) return;
+                  atualizar((proj) => ({ ...proj, pasta: nome }));
+                  setPastasDisponiveis((prev) =>
+                    [...new Set([...prev, nome])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+                  );
+                  setNovaPastaInput("");
+                  setMostraNovaPasta(false);
+                }}
+              >✓</Button>
+              <Button size="sm" variant="ghost" onClick={() => setMostraNovaPasta(false)}>✕</Button>
+            </div>
+          )}
+        </div>
+      </Card>
 
       <Card
         title="Bloco 1 — Costado e materiais"

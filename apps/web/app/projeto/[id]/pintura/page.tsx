@@ -139,7 +139,7 @@ export default function ProjetoPinturaPage({ params }: PageProps) {
           <div>
             <dt className="text-carbono-500">Acessórios (estim.)</dt>
             <dd className="font-bold tabular">{num(resultado.areaAcessorios_m2)} m²</dd>
-            <dd className="text-xs text-carbono-500">0,05 m²/kg de acessórios</dd>
+            <dd className="text-xs text-carbono-500">20% de (Costado + Teto)</dd>
           </div>
           <div className="rounded-md bg-verde-50 border border-verde-200 p-2">
             <dt className="text-carbono-500">Área total pintável</dt>

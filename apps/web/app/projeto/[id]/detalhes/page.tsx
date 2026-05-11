@@ -232,6 +232,58 @@ export default function ProjetoDetalhesPage({ params }: PageProps) {
         </div>
       </Card>
 
+      {/* ============== FUNDO DUPLO ============== */}
+      {projeto.fundoDuplo?.ativo && (() => {
+        const fd = projeto.fundoDuplo!;
+        const p = projeto.parametros;
+        const largFD  = fd.larguraChapa_mm    ?? p.larguraChapaFundo_mm    ?? p.larguraChapa_mm;
+        const comprFD = fd.comprimentoChapa_mm ?? p.comprimentoChapaFundo_mm ?? p.comprimentoChapa_mm;
+        const areaUn  = (largFD / 1_000) * (comprFD / 1_000);
+        const qtde    = Math.ceil((t.fundo.area_m2 / areaUn) * 1.15);
+        const pesoFD  = t.fundo.chapaComercial.pesoPorM2 * areaUn * qtde;
+        return (
+          <Card
+            title="Fundo Duplo (segundo fundo interno)"
+            subtitle="Mesma espessura do fundo externo. Dimensões de chapa e CA configuráveis."
+          >
+            <dl className="grid gap-3 text-sm md:grid-cols-4">
+              <div>
+                <dt className="text-carbono-500">Espessura adotada</dt>
+                <dd className="font-bold tabular">
+                  {mm(t.fundo.e_adotada_mm)}{" "}
+                  <Badge cor="carbono">{t.fundo.chapaComercial.polegada}"</Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-carbono-500">Chapa (Larg × Compr)</dt>
+                <dd className="font-bold tabular">{largFD} × {comprFD} mm</dd>
+              </div>
+              <div>
+                <dt className="text-carbono-500">CA do fundo duplo</dt>
+                <dd className="font-bold tabular">
+                  {mm(fd.CA_mm ?? p.CA_fundo_mm ?? p.CA_mm)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-carbono-500">Área projetada</dt>
+                <dd className="font-bold tabular">{num(t.fundo.area_m2)} m²</dd>
+              </div>
+              <div>
+                <dt className="text-carbono-500">Qtde estimada de chapas</dt>
+                <dd className="font-bold tabular">{qtde} un</dd>
+              </div>
+              <div>
+                <dt className="text-carbono-500">Peso estimado</dt>
+                <dd className="font-bold tabular">{kg(pesoFD)}</dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-xs text-carbono-500">
+              Estimativa: {qtde} chapas × {num(areaUn, 3)} m² × {num(t.fundo.chapaComercial.pesoPorM2, 2)} kgf/m² (fator 1,15 de perda no corte circular).
+            </p>
+          </Card>
+        );
+      })()}
+
       {/* ============== TETO ============== */}
       <Card
         title={`Teto — ${rotuloTeto(t.teto.tipo)}`}

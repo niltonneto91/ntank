@@ -561,8 +561,10 @@ export function MemoriaPDF({
             ...(resultado.bocais.length > 0 ? ["Bocais e flanges"] : []),
             ...(resultado.acessorios ? ["Escadas, plataformas e guarda-corpos"] : []),
             "Resumo geral",
-            "Lista de chapas e bocais",
             "Referências normativas",
+            "Anexo 1 — Quantitativo de Chapas",
+            "Anexo 2 — Quantitativo de Soldagem",
+            "Anexo 3 — Quantitativo de Pintura",
           ].map((titulo, i) => (
             <View key={titulo} style={styles.sumarioLinha}>
               <Text style={styles.sumarioNum}>{i + 1}.</Text>
@@ -1141,51 +1143,33 @@ export function MemoriaPDF({
           const custoMDOTotal = resultado.pesoTotal_kg * custoMDO;
           const custoTotal = resultado.custo_R$ + custoMDOTotal;
           return (
-            <View style={styles.destaqueBox}>
-              <Text style={styles.destaqueLabel}>Custo total estimado (aço + mão de obra)</Text>
-              <Text style={styles.destaqueValor}>
-                {fmtBRL.format(custoTotal)}
-              </Text>
-              <Text style={{ fontSize: 8, color: PRETO, marginTop: 4 }}>
-                Aço: {fmtBRL.format(resultado.custo_R$)} ({fmtBRL.format(projeto.parametros.custoAcoPorKg_R$)}/kg) ·{" "}
-                MO: {fmtBRL.format(custoMDOTotal)} ({fmtBRL.format(custoMDO)}/kg) ·{" "}
-                Total: {fmtNum(resultado.pesoTotal_kg, 0)} kg
-              </Text>
-            </View>
+            <>
+              {/* Linhas individuais de custo (como no app) */}
+              <KV
+                kv={[
+                  ["Custo do aço", `${fmtBRL.format(resultado.custo_R$)}  (${fmtBRL.format(projeto.parametros.custoAcoPorKg_R$)}/kg)`],
+                  ["Custo mão de obra", `${fmtBRL.format(custoMDOTotal)}  (${fmtBRL.format(custoMDO)}/kg)`],
+                ]}
+              />
+              {/* Box de destaque com total */}
+              <View style={styles.destaqueBox}>
+                <Text style={[styles.destaqueLabel, { fontFamily: "Helvetica-Bold" }]}>
+                  CUSTO TOTAL ESTIMADO (AÇO + MÃO DE OBRA)
+                </Text>
+                <Text style={styles.destaqueValor}>
+                  {fmtBRL.format(custoTotal)}
+                </Text>
+                <Text style={{ fontSize: 8, color: PRETO, marginTop: 4 }}>
+                  Total de aço: {fmtNum(resultado.pesoTotal_kg, 0)} kg
+                </Text>
+              </View>
+            </>
           );
         })()}
 
-        <Text style={styles.h2}>Lista de chapas comerciais (costado)</Text>
-        <View style={styles.tabela}>
-          <View style={styles.tabelaHeader}>
-            <Text style={{ flex: 1 }}>Chapa</Text>
-            <Text style={{ flex: 1 }}>Espessura</Text>
-            <Text style={{ flex: 1 }}>Peso/m²</Text>
-            <Text style={{ flex: 1, textAlign: "right" }}>Quantidade</Text>
-          </View>
-          {resultado.costado.listaChapas.map((c, i) => (
-            <View
-              key={c.chapa.polegada}
-              style={[
-                styles.tabelaLinha,
-                i % 2 === 1 ? styles.tabelaLinhaAlt : {},
-              ]}
-            >
-              <Text style={[styles.td, { flex: 1, fontFamily: "Helvetica-Bold" }]}>
-                {c.chapa.polegada}"
-              </Text>
-              <Text style={[styles.td, { flex: 1 }]}>
-                {fmtNum(c.chapa.espessura)} mm
-              </Text>
-              <Text style={[styles.td, { flex: 1 }]}>
-                {fmtNum(c.chapa.pesoPorM2)} kgf/m²
-              </Text>
-              <Text style={[styles.tdNum, { flex: 1 }]}>
-                {fmtNum(c.quantidade, 2)}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <Text style={{ fontSize: 7, color: CARBONO_500, marginTop: 4, marginBottom: 8 }}>
+          O quantitativo completo de chapas (costado, fundo, teto e fundo duplo) está no Anexo 1 deste documento.
+        </Text>
 
         <Text style={styles.h2}>Referências normativas</Text>
         <Text style={styles.paragrafo}>

@@ -50,11 +50,14 @@ export function calcularTetoDomeAutoportante(
   }
 
   const e_estrutural = R_dome_m / FATOR_DOME_ATMOSFERICO;
-  const governaMinimo = e_estrutural < E_TETO_MIN_NOMINAL_MM;
   const e_calc = Math.max(E_TETO_MIN_NOMINAL_MM, e_estrutural) + entrada.CA_mm;
-  // Mínimo nominal de 5 mm: não existe chapa de 5 mm no mercado.
-  // Quando o mínimo governa, usar 4,75 mm (3/16") como base estrutural.
-  const e_para_comercial = governaMinimo ? 4.75 + entrada.CA_mm : e_calc;
+
+  // Mínimo nominal 5 mm, mas não existe chapa de 5 mm no mercado.
+  // 3/16" (4,75 mm) é adotado apenas quando o cálculo estrutural ficar
+  // abaixo de 4,75 mm. Se o cálculo der >= 4,75 mm (ex.: 4,982 mm),
+  // usa-se o valor calculado → próxima chapa comercial (1/4" = 6,35 mm).
+  const e_estrutural_efetivo = Math.max(e_estrutural, 4.75);
+  const e_para_comercial = e_estrutural_efetivo + entrada.CA_mm;
   const chapa = selecionarChapaComercial(e_para_comercial);
 
   // Calota esférica — usa D_teto (diâmetro externo) para área real

@@ -54,6 +54,18 @@ export interface EntradaListaMateriais {
   readonly CA_fundoDuplo_mm?: number;
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Arredonda quantidade de chapas para cima apenas quando a parte decimal
+ * for >= 0,1 (equivale a mais de 10% de sobra que justifica pedir uma chapa
+ * adicional). Abaixo de 0,1 trunca — as sobras cabem numa boa.
+ */
+function arredondarChapas(qtd: number): number {
+  const fracional = qtd - Math.floor(qtd);
+  return fracional >= 0.1 ? Math.ceil(qtd) : Math.floor(qtd);
+}
+
 // ─── Cálculo ──────────────────────────────────────────────────────────────────
 
 export function calcularListaMateriais(
@@ -75,8 +87,8 @@ export function calcularListaMateriais(
   // ── Costado ─────────────────────────────────────────────────────────────────
   for (const { chapa, quantidade } of resultado.costado.listaChapas) {
     const areaUn = (largCostado / 1_000) * (comprCostado / 1_000);
-    // chapasPorAnel é float (π×D/L); arredonda para cima para quantidade inteira de chapas
-    const qtdeCostado = Math.ceil(quantidade);
+    // chapasPorAnel é float (π×D/L); decimal >= 0,1 → arredonda para cima
+    const qtdeCostado = arredondarChapas(quantidade);
     itens.push({
       componente:     "Costado",
       espessura_mm:   chapa.espessura,
@@ -95,7 +107,7 @@ export function calcularListaMateriais(
   {
     const chapa  = resultado.fundo.chapaComercial;
     const areaUn = (largFundo / 1_000) * (comprFundo / 1_000);
-    const qtde   = Math.ceil((resultado.fundo.area_m2 / areaUn) * 1.15);
+    const qtde   = arredondarChapas((resultado.fundo.area_m2 / areaUn) * 1.15);
     itens.push({
       componente:     "Fundo",
       espessura_mm:   chapa.espessura,
@@ -120,7 +132,7 @@ export function calcularListaMateriais(
     const D_ext_m = Math.sqrt((4 * resultado.fundo.area_m2) / Math.PI);
     const areaAnel_m2 = Math.PI * (D_ext_m / 2) * (aa.largura_mm / 1_000) * 2; // approx annular band
     const areaUn = (largFundo / 1_000) * (comprFundo / 1_000);
-    const qtde   = Math.ceil((areaAnel_m2 / areaUn) * 1.1);
+    const qtde   = arredondarChapas((areaAnel_m2 / areaUn) * 1.1);
     const pesoM2 = aa.espessura_mm * 7.85; // kg/m² ≈ e_mm × 7,85
     itens.push({
       componente:     "Fundo",
@@ -141,7 +153,7 @@ export function calcularListaMateriais(
     // Mesma espessura e área do fundo principal; CA pode diferir.
     const chapaFD = resultado.fundo.chapaComercial;
     const areaUn  = (largFD / 1_000) * (comprFD / 1_000);
-    const qtde    = Math.ceil((resultado.fundo.area_m2 / areaUn) * 1.15);
+    const qtde    = arredondarChapas((resultado.fundo.area_m2 / areaUn) * 1.15);
     itens.push({
       componente:      "Fundo Duplo",
       espessura_mm:    chapaFD.espessura,
@@ -160,7 +172,7 @@ export function calcularListaMateriais(
   {
     const chapa  = resultado.teto.chapaComercial;
     const areaUn = (largTeto / 1_000) * (comprTeto / 1_000);
-    const qtde   = Math.ceil((resultado.teto.area_m2 / areaUn) * 1.15);
+    const qtde   = arredondarChapas((resultado.teto.area_m2 / areaUn) * 1.15);
     itens.push({
       componente:     "Teto",
       espessura_mm:   chapa.espessura,

@@ -101,9 +101,10 @@ export function calcularTetoConicoSuportado(
   const angulo_rad = (angulo_graus * Math.PI) / 180;
   const cosTheta = Math.cos(angulo_rad);
 
+  // Teto suportado: a chapa NÃO é estrutural (vigas radiais absorvem a carga).
+  // Espessura mínima normativa = 5 mm, mas não existe comercialmente.
+  // Adotar sempre 3/16" (4,75 mm) como chapa de fechamento.
   const e_calc = E_CHAPA_MIN_NOMINAL_MM + entrada.CA_mm;
-  // Mínimo nominal de 5 mm: não existe chapa de 5 mm no mercado.
-  // Usar 4,75 mm (3/16") como base estrutural (mesmo padrão do costado).
   const e_para_comercial = 4.75 + entrada.CA_mm;
   const chapa = selecionarChapaComercial(e_para_comercial);
 
