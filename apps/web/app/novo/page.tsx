@@ -405,7 +405,7 @@ export default function NovoProjetoPage() {
       )}
 
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={() => router.push("/")}>
+        <Button variant="ghost" onClick={() => router.push("/projetos")}>
           Cancelar
         </Button>
         <Button onClick={handleCriar}>Criar projeto</Button>

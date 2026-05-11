@@ -48,7 +48,7 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
         <p className="text-sm text-red-700">
           {estado.status === "ausente" ? "Projeto não encontrado." : estado.mensagem}
         </p>
-        <Link href="/" className="mt-2 inline-block">
+        <Link href="/projetos" className="mt-2 inline-block">
           <Button variant="ghost">← Voltar</Button>
         </Link>
       </Card>

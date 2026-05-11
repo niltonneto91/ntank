@@ -30,7 +30,7 @@ export default function ProjetoGeometriaPage({ params }: PageProps) {
       <Card>
         <p className="text-sm">Projeto não encontrado.</p>
         <div className="mt-2">
-          <Link href="/">
+          <Link href="/projetos">
             <Button variant="ghost">← Voltar</Button>
           </Link>
         </div>

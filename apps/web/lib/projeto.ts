@@ -269,8 +269,24 @@ export function novaPlataformaId(): string {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+/**
+ * Discriminador de calculadora. Permite múltiplos tipos de projeto no mesmo banco.
+ * Novos tipos serão adicionados conforme as fases do roadmap NTANK.
+ */
+export type TipoProjeto =
+  | "API650"     // Tanque novo (API 650 / NBR 7821) — implementado
+  | "API653"     // Tanque existente — inspeção e re-rating (futuro)
+  | "API2000"    // Ventilação atmosférica (futuro)
+  | "API2350"    // Proteção contra transbordo (futuro)
+  | "BACIA";     // Bacia de contenção NBR 17505 (futuro)
+
 export interface ProjetoNTANK {
   readonly id: string;
+  /**
+   * Tipo de calculadora. Padrão "API650".
+   * Campo opcional para retrocompatibilidade com projetos criados antes da Fase 0.
+   */
+  tipo?: TipoProjeto;
   /** Nome amigável: "Base BR-Sombrio T-101". */
   nome: string;
   /** Cliente / responsável (opcional). */
@@ -326,6 +342,7 @@ export function criarProjeto(parcial?: Partial<ProjetoNTANK>): ProjetoNTANK {
   const agora = new Date().toISOString();
   return {
     id: novoId(),
+    tipo: parcial?.tipo ?? "API650",
     nome: parcial?.nome?.trim() || "Projeto sem nome",
     cliente: parcial?.cliente,
     local: parcial?.local,
@@ -361,6 +378,7 @@ export function criarProjeto(parcial?: Partial<ProjetoNTANK>): ProjetoNTANK {
  * anteriores. Usado pelo loader de IndexedDB para compatibilidade.
  */
 export function migrarProjeto(p: ProjetoNTANK): ProjetoNTANK {
+  // Fase 0 — garantir campo tipo em projetos criados antes do roadmap multi-calculadora
   // Renomear passo_mm legado para passoPe_mm
   const escadaLegada = p.acessorios?.escada as
     | (EscadaProjeto & { passo_mm?: number })
@@ -380,6 +398,7 @@ export function migrarProjeto(p: ProjetoNTANK): ProjetoNTANK {
 
   return {
     ...p,
+    tipo: p.tipo ?? "API650",   // retrocompatibilidade: projetos antigos são API 650
     fundo: p.fundo ?? { ...FUNDO_DEFAULT },
     teto: p.teto ?? { ...TETO_DEFAULT },
     bocais: p.bocais ?? [],

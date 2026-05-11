@@ -9,7 +9,7 @@ export function ProjetoHeader({ projeto }: { projeto: ProjetoNTANK }) {
   return (
     <header className="space-y-2">
       <Link
-        href="/"
+        href="/projetos"
         className="text-xs text-carbono-500 hover:text-carbono-700"
       >
         ← Projetos

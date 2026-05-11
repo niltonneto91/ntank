@@ -314,7 +314,7 @@ export default function ProjetoPinturaPage({ params }: PageProps) {
         <Link href={`/projeto/${projeto.id}/soldagem`}>
           <Button variant="ghost">← Soldagem</Button>
         </Link>
-        <Link href="/">
+        <Link href="/projetos">
           <Button>Concluir → Lista de projetos</Button>
         </Link>
       </div>
