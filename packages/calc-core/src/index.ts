@@ -186,6 +186,8 @@ export {
   // Cálculos
   verificarEscopoAPI2350,
   calcularTaxaSubidaNivel,
+  calcularAlturaFisicaMaxima,
+  calcularNiveisOPS,
   calcularTempoRespostaAPI2350,
   calcularVolumeRespostaAPI2350,
   verificarNiveisAPI2350,
@@ -230,6 +232,10 @@ export type {
   ResultadoEscopo,
   StatusVerificacao,
   TipoOPS,
+  EntradaGeometriaFisicaAPI2350,
+  ResultadoGeometriaFisicaAPI2350,
+  EntradaCalculoNiveisOPS,
+  ResultadoCalculoNiveisOPS,
 } from "./api2350/index.js";
 
 // === Fase 5 — Escadas, plataformas e guarda-corpos ===

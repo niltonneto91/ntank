@@ -17,6 +17,8 @@ import Link from "next/link";
 import {
   verificarEscopoAPI2350,
   calcularTaxaSubidaNivel,
+  calcularAlturaFisicaMaxima,
+  calcularNiveisOPS,
   calcularTempoRespostaAPI2350,
   calcularVolumeRespostaAPI2350,
   verificarNiveisAPI2350,
@@ -34,6 +36,7 @@ import type {
   ProjetoAPI2350,
   TipoTanqueAPI2350,
   NormaContrucao,
+  ConfigNiveisAutomaticos,
 } from "@/lib/api2350-projeto";
 
 // ---------------------------------------------------------------------------
@@ -294,6 +297,15 @@ export default function API2350Page({ params }: PageProps) {
 
     const escopoRes = verificarEscopoAPI2350(p.escopo);
 
+    // --- Geometria física: H_fisico_max corrigido por câmara de espuma e boia ---
+    const geoFisicaRes = calcularAlturaFisicaMaxima({
+      H_total_m:               p.geometria.H_total_m,
+      temCamaraEspuma:         p.geometria.temCamaraEspuma,
+      distCamaraEspuma_m:      p.geometria.distCamaraEspuma_m,
+      temSeloFlutuanteInterno: p.geometria.temSeloFlutuanteInterno,
+      diametroBoia_m:          p.geometria.diametroBoia_m,
+    });
+
     const taxaRes = calcularTaxaSubidaNivel({
       D_m:          p.geometria.D_m,
       H_util_m:     p.geometria.H_util_m,
@@ -311,16 +323,49 @@ export default function API2350Page({ params }: PageProps) {
       tempo_adotado_min: tempoRes.total_adotado_min,
     });
 
+    // --- Níveis: automáticos (calculados) ou manuais (entrados pelo usuário) ---
+    const niveisCalcRes =
+      p.configNiveis.modo === "automatico"
+        ? calcularNiveisOPS({
+            H_fisico_max_m:             geoFisicaRes.H_fisico_max_m,
+            volume_resposta_m3:         volRes.volume_m3,
+            A_m2:                       taxaRes.A_m2,
+            margemCH_mm:                p.configNiveis.margemCH_mm,
+            margemMW_mm:                p.configNiveis.margemMW_mm,
+            temAOPS:                    p.ops.temAOPS,
+            margemAOPS_acimadeHH_mm:    p.configNiveis.margemAOPS_acimadeHH_mm,
+          })
+        : null;
+
+    // Níveis efetivos: automáticos têm prioridade quando ativados
+    const niveisEfetivos = niveisCalcRes
+      ? {
+          H_fisico_max_m: geoFisicaRes.H_fisico_max_m,
+          CH_m:   niveisCalcRes.CH_m,
+          AOPS_m: niveisCalcRes.AOPS_m,
+          HH_m:   niveisCalcRes.HH_m,
+          H_m:    p.niveis.H_m,
+          MW_m:   niveisCalcRes.MW_m,
+        }
+      : {
+          H_fisico_max_m: geoFisicaRes.H_fisico_max_m,
+          CH_m:   p.niveis.CH_m,
+          AOPS_m: p.niveis.AOPS_m,
+          HH_m:   p.niveis.HH_m,
+          H_m:    p.niveis.H_m,
+          MW_m:   p.niveis.MW_m,
+        };
+
     const niveisRes = verificarNiveisAPI2350({
-      H_fisico_max_m: p.niveis.H_fisico_max_m,
-      CH_m:           p.niveis.CH_m,
-      AOPS_m:         p.niveis.AOPS_m,
-      HH_m:           p.niveis.HH_m,
-      H_m:            p.niveis.H_m,
-      MW_m:           p.niveis.MW_m,
-      A_m2:           taxaRes.A_m2,
+      H_fisico_max_m:     niveisEfetivos.H_fisico_max_m,
+      CH_m:               niveisEfetivos.CH_m,
+      AOPS_m:             niveisEfetivos.AOPS_m,
+      HH_m:               niveisEfetivos.HH_m,
+      H_m:                niveisEfetivos.H_m,
+      MW_m:               niveisEfetivos.MW_m,
+      A_m2:               taxaRes.A_m2,
       volume_resposta_m3: volRes.volume_m3,
-      temAOPS:        p.ops.temAOPS,
+      temAOPS:            p.ops.temAOPS,
     });
 
     const categoriaRes = classificarCategoriaOPS({
@@ -393,7 +438,8 @@ export default function API2350Page({ params }: PageProps) {
         : "NAO_CONFORME";
 
     return {
-      escopoRes, taxaRes, tempoRes, volRes, niveisRes, categoriaRes,
+      escopoRes, geoFisicaRes, taxaRes, tempoRes, volRes,
+      niveisCalcRes, niveisEfetivos, niveisRes, categoriaRes,
       Q_efetiva, t_disponivel_min,
       Q_liquida, volResLiquido, t_disponivel_liquido,
       conformidade, statusGeral,
@@ -446,6 +492,8 @@ export default function API2350Page({ params }: PageProps) {
     atualizar(prev => ({ ...prev, operacao:    { ...prev.operacao,    ...f } }));
   const updTempo      = (f: Partial<ProjetoAPI2350["tempoResposta"]>) =>
     atualizar(prev => ({ ...prev, tempoResposta: { ...prev.tempoResposta, ...f } }));
+  const updConfigNiveis = (f: Partial<ConfigNiveisAutomaticos>) =>
+    atualizar(prev => ({ ...prev, configNiveis: { ...prev.configNiveis, ...f } }));
   const updNiveis     = (f: Partial<ProjetoAPI2350["niveis"]>) =>
     atualizar(prev => ({ ...prev, niveis:      { ...prev.niveis,      ...f } }));
   const updOps        = (f: Partial<ProjetoAPI2350["ops"]>) =>
@@ -631,6 +679,73 @@ export default function API2350Page({ params }: PageProps) {
                 </div>
               )}
             </div>
+
+            {/* Limitadores do nível físico máximo */}
+            <div className="mt-4 border-t border-carbono-100 pt-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-carbono-500">
+                Limitadores do nível físico máximo
+              </p>
+              <div className="space-y-3">
+                {/* Câmara de espuma */}
+                <div className="flex flex-wrap items-start gap-3">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input type="checkbox" className="h-4 w-4 rounded"
+                      checked={p.geometria.temCamaraEspuma}
+                      onChange={e => updGeometria({ temCamaraEspuma: e.target.checked })} />
+                    Possui câmara de espuma (foam chamber)
+                  </label>
+                  {p.geometria.temCamaraEspuma && (
+                    <div className="w-56">
+                      <NumberField
+                        label="Dist. borda inferior câmara → teto" unit="m"
+                        hint="Espaço ocupado pela câmara dentro do costado"
+                        value={p.geometria.distCamaraEspuma_m ?? 0}
+                        onChange={v => updGeometria({ distCamaraEspuma_m: v })}
+                        step={0.01} min={0.01} max={p.geometria.H_total_m} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Selo flutuante interno */}
+                <div className="flex flex-wrap items-start gap-3">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input type="checkbox" className="h-4 w-4 rounded"
+                      checked={p.geometria.temSeloFlutuanteInterno}
+                      onChange={e => updGeometria({ temSeloFlutuanteInterno: e.target.checked })} />
+                    Possui selo flutuante interno (IFR)
+                  </label>
+                  {p.geometria.temSeloFlutuanteInterno && (
+                    <div className="w-56">
+                      <NumberField
+                        label="Diâmetro da boia do selo flutuante" unit="m"
+                        hint="Altura mínima de folga entre produto e teto"
+                        value={p.geometria.diametroBoia_m ?? 0}
+                        onChange={v => updGeometria({ diametroBoia_m: v })}
+                        step={0.01} min={0.01} max={p.geometria.H_total_m} />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Resumo: H_fisico_max calculado */}
+              {calculo && (geoFisicaRes => (
+                <div className="mt-3 rounded-md bg-creme px-3 py-2 text-sm">
+                  <span className="text-carbono-600">Nível físico máximo calculado: </span>
+                  <strong className="tabular">{calculo.geoFisicaRes.H_fisico_max_m} m</strong>
+                  {calculo.geoFisicaRes.descontos.total_m > 0 && (
+                    <span className="ml-2 text-xs text-carbono-500">
+                      (H_total {p.geometria.H_total_m} m
+                      {calculo.geoFisicaRes.descontos.camaraEspuma_m > 0 && ` − câmara ${calculo.geoFisicaRes.descontos.camaraEspuma_m} m`}
+                      {calculo.geoFisicaRes.descontos.seloFlutuante_m > 0 && ` − boia ${calculo.geoFisicaRes.descontos.seloFlutuante_m} m`}
+                      )
+                    </span>
+                  )}
+                </div>
+              ))(calculo.geoFisicaRes)}
+              {calculo?.geoFisicaRes.alertas.map(a => (
+                <Alerta key={a.code} code={a.code} nivel={a.nivel} mensagem={a.mensagem} />
+              ))}
+            </div>
           </Card>
 
           {/* ── Produto ── */}
@@ -782,45 +897,138 @@ export default function API2350Page({ params }: PageProps) {
           {/* ── Níveis OPS ── */}
           <Card title="Níveis operacionais do OPS (API 2350 §5)"
             subtitle="MW = Maximum Working Level · HH = High-High · CH = Critical High">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <NumberField label="Nível físico máximo" unit="m"
-                value={p.niveis.H_fisico_max_m}
-                onChange={v => updNiveis({ H_fisico_max_m: v })}
-                step={0.01} min={0.01}
-                hint="Ponto de transbordamento real" />
-              <NumberField label="CH — Critical High Level" unit="m"
-                value={p.niveis.CH_m}
-                onChange={v => updNiveis({ CH_m: v })}
-                step={0.01} min={0.01} />
-              <NumberField label="HH — High-High Level (LAHH)" unit="m"
-                value={p.niveis.HH_m}
-                onChange={v => updNiveis({ HH_m: v })}
-                step={0.01} min={0.01} />
-              <NumberField label="MW — Maximum Working Level" unit="m"
-                value={p.niveis.MW_m}
-                onChange={v => updNiveis({ MW_m: v })}
-                step={0.01} min={0.01} />
+
+            {/* Toggle: automático vs manual */}
+            <div className="mb-4 flex items-center gap-3 rounded-lg border border-carbono-200 bg-carbono-50 px-4 py-3">
+              <span className="text-sm font-medium text-carbono-700">Modo de definição dos níveis:</span>
+              <div className="flex overflow-hidden rounded-md border border-carbono-300">
+                <button
+                  className={["px-3 py-1.5 text-sm font-medium transition-colors", p.configNiveis.modo === "automatico" ? "bg-verde text-white" : "bg-white text-carbono-700 hover:bg-creme"].join(" ")}
+                  onClick={() => updConfigNiveis({ modo: "automatico" })}>
+                  ⚡ Automático
+                </button>
+                <button
+                  className={["px-3 py-1.5 text-sm font-medium transition-colors", p.configNiveis.modo === "manual" ? "bg-carbono-700 text-white" : "bg-white text-carbono-700 hover:bg-creme"].join(" ")}
+                  onClick={() => updConfigNiveis({ modo: "manual" })}>
+                  ✏ Manual
+                </button>
+              </div>
+              <span className="ml-auto text-xs text-carbono-500">
+                {p.configNiveis.modo === "automatico"
+                  ? "Os níveis são calculados automaticamente a partir do volume de resposta."
+                  : "Os níveis são inseridos manualmente pelo responsável."}
+              </span>
+            </div>
+
+            {/* Modo automático: margens */}
+            {p.configNiveis.modo === "automatico" && (
+              <div className="mb-4 rounded-lg border border-verde/30 bg-verde/5 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-carbono-600">
+                  Margens para cálculo automático
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <NumberField
+                    label="Margem CH abaixo do máx. físico" unit="mm"
+                    hint="Espaço entre H_fisico_max e CH. Mín. normativo: 76 mm"
+                    value={p.configNiveis.margemCH_mm}
+                    onChange={v => updConfigNiveis({ margemCH_mm: v })}
+                    step={10} min={76} max={2000} />
+                  <NumberField
+                    label="Margem MW abaixo do HH" unit="mm"
+                    hint="Espaço operacional entre MW e HH"
+                    value={p.configNiveis.margemMW_mm}
+                    onChange={v => updConfigNiveis({ margemMW_mm: v })}
+                    step={50} min={0} max={5000} />
+                  {p.ops.temAOPS && (
+                    <NumberField
+                      label="AOPS acima do HH" unit="mm"
+                      hint="Posição do AOPS a partir do HH. Zero = ponto médio HH–CH"
+                      value={p.configNiveis.margemAOPS_acimadeHH_mm ?? 0}
+                      onChange={v => updConfigNiveis({ margemAOPS_acimadeHH_mm: v > 0 ? v : null })}
+                      step={10} min={0} />
+                  )}
+                </div>
+
+                {/* Níveis calculados — exibição readonly */}
+                {calculo?.niveisCalcRes && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-carbono-500">
+                      Níveis calculados automaticamente
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                      {[
+                        { label: "H físico máx.", value: calculo.geoFisicaRes.H_fisico_max_m, color: "text-red-700" },
+                        { label: "CH (Critical High)", value: calculo.niveisCalcRes.CH_m, color: "text-orange-700" },
+                        { label: "HH (High-High / LAHH)", value: calculo.niveisCalcRes.HH_m, color: "text-amber-700" },
+                        { label: "MW (Max. Working)", value: calculo.niveisCalcRes.MW_m, color: "text-green-700" },
+                        ...(calculo.niveisCalcRes.AOPS_m != null
+                          ? [{ label: "AOPS", value: calculo.niveisCalcRes.AOPS_m, color: "text-amber-600" }]
+                          : []),
+                      ].map(item => (
+                        <div key={item.label} className="rounded-md border border-carbono-200 bg-white px-3 py-2">
+                          <p className="text-xs text-carbono-500">{item.label}</p>
+                          <p className={`text-lg font-bold tabular-nums ${item.color}`}>{n3(item.value)} m</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-carbono-400">
+                      Distância HH → CH calculada: <strong>{n1(calculo.niveisCalcRes.distancia_HH_CH_mm)} mm</strong>
+                      {" · "}Mínimo requerido: <strong>{n1(calculo.niveisCalcRes.distancia_requerida_mm)} mm</strong>
+                    </p>
+                    {calculo.niveisCalcRes.alertas.map(a => (
+                      <Alerta key={a.code} code={a.code} nivel={a.nivel} mensagem={a.mensagem} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modo manual (ou campos complementares em ambos os modos) */}
+            {p.configNiveis.modo === "manual" && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <NumberField label="Nível físico máximo" unit="m"
+                  value={p.niveis.H_fisico_max_m}
+                  onChange={v => updNiveis({ H_fisico_max_m: v })}
+                  step={0.01} min={0.01}
+                  hint="Ponto de transbordamento real" />
+                <NumberField label="CH — Critical High Level" unit="m"
+                  value={p.niveis.CH_m}
+                  onChange={v => updNiveis({ CH_m: v })}
+                  step={0.01} min={0.01} />
+                <NumberField label="HH — High-High Level (LAHH)" unit="m"
+                  value={p.niveis.HH_m}
+                  onChange={v => updNiveis({ HH_m: v })}
+                  step={0.01} min={0.01} />
+                <NumberField label="MW — Maximum Working Level" unit="m"
+                  value={p.niveis.MW_m}
+                  onChange={v => updNiveis({ MW_m: v })}
+                  step={0.01} min={0.01} />
+                {p.ops.temAOPS && (
+                  <NumberField label="Nível de atuação do AOPS" unit="m"
+                    value={p.niveis.AOPS_m ?? 0}
+                    onChange={v => updNiveis({ AOPS_m: v > 0 ? v : null })}
+                    step={0.01} min={0} />
+                )}
+              </div>
+            )}
+
+            {/* Campos comuns (ambos os modos) */}
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <NumberField label="H — High Level (opcional)" unit="m"
                 value={p.niveis.H_m ?? 0}
                 onChange={v => updNiveis({ H_m: v > 0 ? v : null })}
                 step={0.01} min={0}
-                hint="Nível de alerta antecipado. Zero = não usado." />
-              {p.ops.temAOPS && (
-                <NumberField label="Nível de atuação do AOPS" unit="m"
-                  value={p.niveis.AOPS_m ?? 0}
-                  onChange={v => updNiveis({ AOPS_m: v > 0 ? v : null })}
-                  step={0.01} min={0} />
-              )}
+                hint="Alerta antecipado. Zero = não usado." />
               <NumberField label="Nível normal de operação" unit="m"
                 value={p.niveis.nivelNormal_m ?? 0}
                 onChange={v => updNiveis({ nivelNormal_m: v > 0 ? v : null })}
                 step={0.01} min={0}
-                hint="Opcional — apenas para referência no diagrama" />
+                hint="Apenas para referência no diagrama" />
               <NumberField label="Nível inicial (antes do recebimento)" unit="m"
                 value={p.niveis.nivelInicial_m ?? 0}
                 onChange={v => updNiveis({ nivelInicial_m: v > 0 ? v : null })}
                 step={0.01} min={0}
-                hint="Opcional — nível no início da transferência" />
+                hint="Nível no início da transferência" />
             </div>
           </Card>
 
@@ -900,7 +1108,16 @@ export default function API2350Page({ params }: PageProps) {
             {/* Diagrama SVG */}
             <Card title="Diagrama de níveis" destaque>
               <div className="flex justify-center">
-                <TankDiagram niveis={p.niveis} H_total_m={p.geometria.H_total_m} />
+                <TankDiagram
+                  niveis={{
+                    ...p.niveis,
+                    H_fisico_max_m: calculo?.niveisEfetivos.H_fisico_max_m ?? p.niveis.H_fisico_max_m,
+                    CH_m:   calculo?.niveisEfetivos.CH_m   ?? p.niveis.CH_m,
+                    HH_m:   calculo?.niveisEfetivos.HH_m   ?? p.niveis.HH_m,
+                    AOPS_m: calculo?.niveisEfetivos.AOPS_m ?? p.niveis.AOPS_m,
+                    MW_m:   calculo?.niveisEfetivos.MW_m   ?? p.niveis.MW_m,
+                  }}
+                  H_total_m={p.geometria.H_total_m} />
               </div>
             </Card>
 

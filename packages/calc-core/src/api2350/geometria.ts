@@ -11,8 +11,74 @@
 import type {
   EntradaTaxaSubidaAPI2350,
   ResultadoTaxaSubidaAPI2350,
+  EntradaGeometriaFisicaAPI2350,
+  ResultadoGeometriaFisicaAPI2350,
+  AlertaAPI2350,
 } from "./types.js";
 import { mmMin_para_inH, mmMin_para_mmH, round2, round3 } from "./conversoes.js";
+
+/**
+ * Calcula o nível físico máximo de produto levando em conta a câmara de espuma
+ * e o diâmetro da boia do selo flutuante interno.
+ *
+ * H_fisico_max = H_total − dist_camara_espuma − diametro_boia
+ *
+ * A câmara de espuma ocupa espaço no topo do costado (o produto não deve
+ * ultrapassar a borda inferior da câmara). O diâmetro da boia do selo
+ * flutuante interno é a folga necessária entre o produto e o teto para que
+ * o selo flutue sem tocar — ultrapassar esse limite causaria dano ao selo.
+ */
+export function calcularAlturaFisicaMaxima(
+  entrada: EntradaGeometriaFisicaAPI2350,
+): ResultadoGeometriaFisicaAPI2350 {
+  const alertas: AlertaAPI2350[] = [];
+  let camaraEspuma_m = 0;
+  let seloFlutuante_m = 0;
+
+  if (entrada.temCamaraEspuma) {
+    if (!entrada.distCamaraEspuma_m || entrada.distCamaraEspuma_m <= 0) {
+      alertas.push({
+        code: "G001",
+        nivel: "ALERTA",
+        mensagem:
+          "Câmara de espuma declarada, mas distância (borda inferior → teto) não informada. " +
+          "Informe a medida para que o nível físico máximo seja calculado corretamente.",
+      });
+    } else {
+      camaraEspuma_m = entrada.distCamaraEspuma_m;
+    }
+  }
+
+  if (entrada.temSeloFlutuanteInterno) {
+    if (!entrada.diametroBoia_m || entrada.diametroBoia_m <= 0) {
+      alertas.push({
+        code: "G002",
+        nivel: "ALERTA",
+        mensagem:
+          "Selo flutuante interno (IFR) declarado, mas diâmetro da boia não informado. " +
+          "Informe o diâmetro para limitar corretamente o nível máximo de produto.",
+      });
+    } else {
+      seloFlutuante_m = entrada.diametroBoia_m;
+    }
+  }
+
+  const total_m = camaraEspuma_m + seloFlutuante_m;
+  const H_fisico_max_m = round3(Math.max(0, entrada.H_total_m - total_m));
+
+  const partes: string[] = [`H_total = ${entrada.H_total_m} m`];
+  if (camaraEspuma_m > 0) partes.push(`câmara espuma = ${camaraEspuma_m} m`);
+  if (seloFlutuante_m > 0) partes.push(`boia selo = ${seloFlutuante_m} m`);
+  const formula =
+    `H_fisico_max = ${partes.join(" − ")} = ${H_fisico_max_m} m`;
+
+  return {
+    H_fisico_max_m,
+    descontos: { camaraEspuma_m, seloFlutuante_m, total_m: round3(total_m) },
+    formula,
+    alertas,
+  };
+}
 
 /**
  * Calcula a taxa máxima de subida do nível de líquido no tanque.

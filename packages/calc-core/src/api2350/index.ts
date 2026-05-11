@@ -27,6 +27,12 @@ export type {
   ResultadoEscopo,
   StatusVerificacao,
   TipoOPS,
+  // Geometria física (câmara de espuma + selo flutuante)
+  EntradaGeometriaFisicaAPI2350,
+  ResultadoGeometriaFisicaAPI2350,
+  // Cálculo automático de níveis OPS
+  EntradaCalculoNiveisOPS,
+  ResultadoCalculoNiveisOPS,
 } from "./types.js";
 
 // Conversões
@@ -55,7 +61,10 @@ export {
 export { verificarEscopoAPI2350 } from "./escopo.js";
 
 // Geometria
-export { calcularTaxaSubidaNivel } from "./geometria.js";
+export { calcularTaxaSubidaNivel, calcularAlturaFisicaMaxima } from "./geometria.js";
+
+// Níveis calculados automaticamente
+export { calcularNiveisOPS } from "./niveisCalculados.js";
 
 // Resposta
 export {

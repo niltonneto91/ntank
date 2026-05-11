@@ -29,6 +29,8 @@ import {
   // Cálculos
   verificarEscopoAPI2350,
   calcularTaxaSubidaNivel,
+  calcularAlturaFisicaMaxima,
+  calcularNiveisOPS,
   calcularTempoRespostaAPI2350,
   calcularVolumeRespostaAPI2350,
   verificarNiveisAPI2350,
@@ -640,5 +642,141 @@ describe("classificarCategoriaOPS", () => {
     });
     expect(r.requisitosAtendidos.length).toBeGreaterThan(0);
     expect(r.requisitosNaoAtendidos).toHaveLength(0);
+  });
+});
+
+// =============================================================================
+// 8. Geometria física — câmara de espuma e selo flutuante
+// =============================================================================
+
+describe("calcularAlturaFisicaMaxima", () => {
+  it("sem câmara e sem selo → H_fisico_max = H_total", () => {
+    const r = calcularAlturaFisicaMaxima({
+      H_total_m: 12,
+      temCamaraEspuma: false, distCamaraEspuma_m: null,
+      temSeloFlutuanteInterno: false, diametroBoia_m: null,
+    });
+    expect(r.H_fisico_max_m).toBe(12);
+    expect(r.descontos.total_m).toBe(0);
+    expect(r.alertas).toHaveLength(0);
+  });
+
+  it("câmara de espuma 0,5 m → H_fisico_max = 11,5 m", () => {
+    const r = calcularAlturaFisicaMaxima({
+      H_total_m: 12,
+      temCamaraEspuma: true, distCamaraEspuma_m: 0.5,
+      temSeloFlutuanteInterno: false, diametroBoia_m: null,
+    });
+    expect(r.H_fisico_max_m).toBeCloseTo(11.5, 3);
+    expect(r.descontos.camaraEspuma_m).toBe(0.5);
+    expect(r.alertas).toHaveLength(0);
+  });
+
+  it("câmara 0,5 m + boia 0,3 m → H_fisico_max = 11,2 m", () => {
+    const r = calcularAlturaFisicaMaxima({
+      H_total_m: 12,
+      temCamaraEspuma: true, distCamaraEspuma_m: 0.5,
+      temSeloFlutuanteInterno: true, diametroBoia_m: 0.3,
+    });
+    expect(r.H_fisico_max_m).toBeCloseTo(11.2, 3);
+    expect(r.descontos.seloFlutuante_m).toBe(0.3);
+    expect(r.descontos.total_m).toBeCloseTo(0.8, 3);
+    expect(r.alertas).toHaveLength(0);
+  });
+
+  it("câmara declarada sem distância → alerta G001", () => {
+    const r = calcularAlturaFisicaMaxima({
+      H_total_m: 12,
+      temCamaraEspuma: true, distCamaraEspuma_m: null,
+      temSeloFlutuanteInterno: false, diametroBoia_m: null,
+    });
+    expect(r.H_fisico_max_m).toBe(12); // sem desconto aplicado
+    expect(r.alertas.some(a => a.code === "G001")).toBe(true);
+  });
+
+  it("selo declarado sem diâmetro → alerta G002", () => {
+    const r = calcularAlturaFisicaMaxima({
+      H_total_m: 12,
+      temCamaraEspuma: false, distCamaraEspuma_m: null,
+      temSeloFlutuanteInterno: true, diametroBoia_m: null,
+    });
+    expect(r.alertas.some(a => a.code === "G002")).toBe(true);
+  });
+});
+
+// =============================================================================
+// 9. Cálculo automático de níveis OPS
+// =============================================================================
+
+describe("calcularNiveisOPS", () => {
+  // Caso base: tanque TQ-101, D=7,64m, A≈45,85m², Q=100m³/h, t=20min
+  // V_resposta = 100 * 20 / 60 = 33,33 m³
+  // dist_requerida = 33,33 / 45,85 = 0,7270 m = 727 mm
+  // H_fisico_max = 11,8 m, margemCH = 200 mm → CH = 11,6 m
+  // HH = 11,6 - 0,727 = 10,873 m
+  // MW = 10,873 - 0,5 = 10,373 m
+  const A_m2 = Math.PI * 7.64 * 7.64 / 4; // ≈ 45.855 m²
+  const V_resposta = 100 * 20 / 60; // ≈ 33.333 m³
+
+  it("CH, HH e MW calculados corretamente", () => {
+    const r = calcularNiveisOPS({
+      H_fisico_max_m: 11.8,
+      volume_resposta_m3: V_resposta,
+      A_m2,
+      margemCH_mm: 200,
+      margemMW_mm: 500,
+      temAOPS: false,
+      margemAOPS_acimadeHH_mm: null,
+    });
+    expect(r.CH_m).toBeCloseTo(11.6, 2);
+    const distEsperada_m = V_resposta / A_m2;
+    expect(r.HH_m).toBeCloseTo(11.6 - distEsperada_m, 2);
+    expect(r.MW_m).toBeCloseTo(r.HH_m - 0.5, 2);
+    expect(r.AOPS_m).toBeNull();
+    expect(r.distancia_HH_CH_mm).toBeCloseTo(distEsperada_m * 1000, 0);
+    expect(r.alertas.filter(a => a.nivel === "CRITICO")).toHaveLength(0);
+  });
+
+  it("AOPS no ponto médio quando margemAOPS_acimadeHH_mm = null", () => {
+    const r = calcularNiveisOPS({
+      H_fisico_max_m: 11.8,
+      volume_resposta_m3: V_resposta,
+      A_m2,
+      margemCH_mm: 200,
+      margemMW_mm: 500,
+      temAOPS: true,
+      margemAOPS_acimadeHH_mm: null,
+    });
+    expect(r.AOPS_m).not.toBeNull();
+    expect(r.AOPS_m!).toBeCloseTo((r.HH_m + r.CH_m) / 2, 2);
+  });
+
+  it("AOPS com margem explícita", () => {
+    const r = calcularNiveisOPS({
+      H_fisico_max_m: 11.8,
+      volume_resposta_m3: V_resposta,
+      A_m2,
+      margemCH_mm: 200,
+      margemMW_mm: 500,
+      temAOPS: true,
+      margemAOPS_acimadeHH_mm: 100, // AOPS 100 mm acima de HH
+    });
+    expect(r.AOPS_m).not.toBeNull();
+    expect(r.AOPS_m!).toBeCloseTo(r.HH_m + 0.1, 2);
+  });
+
+  it("margem CH menor que 76 mm → alerta N010 e usa 76 mm", () => {
+    const r = calcularNiveisOPS({
+      H_fisico_max_m: 11.8,
+      volume_resposta_m3: 0.1,
+      A_m2: 45,
+      margemCH_mm: 50, // menor que 76 mm
+      margemMW_mm: 300,
+      temAOPS: false,
+      margemAOPS_acimadeHH_mm: null,
+    });
+    expect(r.alertas.some(a => a.code === "N010")).toBe(true);
+    // CH deve estar 76 mm abaixo do H_fisico_max (não 50 mm)
+    expect(r.CH_m).toBeCloseTo(11.8 - 0.0762, 2);
   });
 });

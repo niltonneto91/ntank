@@ -190,3 +190,88 @@ export interface ResultadoCategoriaAPI2350 {
   requisitosNaoAtendidos: string[];
   alertas: AlertaAPI2350[];
 }
+
+// ---------------------------------------------------------------------------
+// Geometria física — câmara de espuma e selo flutuante interno
+// ---------------------------------------------------------------------------
+
+/**
+ * Parâmetros que limitam o nível máximo de produto no tanque
+ * além da altura do costado.
+ *
+ * Câmara de espuma: espaço reservado no teto para sistema de extinção.
+ * Diâmetro da boia = altura mínima de produto para o selo flutuante funcionar;
+ * acima desse limite o selo toca o teto → o produto NÃO pode ultrapassar
+ * H_total − dist_camara_espuma − diametro_boia.
+ */
+export interface EntradaGeometriaFisicaAPI2350 {
+  /** Altura total do costado [m] */
+  H_total_m: number;
+  /** Possui câmara de espuma (foam chamber)? */
+  temCamaraEspuma: boolean;
+  /**
+   * Distância da borda inferior da câmara de espuma ao teto interno [m].
+   * Descontada diretamente de H_total para obter o espaço ocupado pela câmara.
+   */
+  distCamaraEspuma_m: number | null;
+  /** Possui selo flutuante interno (IFR — Internal Floating Roof)? */
+  temSeloFlutuanteInterno: boolean;
+  /**
+   * Diâmetro da boia do selo flutuante interno [m].
+   * Corresponde à altura mínima de gap entre o produto e o teto.
+   */
+  diametroBoia_m: number | null;
+}
+
+export interface ResultadoGeometriaFisicaAPI2350 {
+  /** Nível físico máximo real de produto [m] = H_total − câmara − boia */
+  H_fisico_max_m: number;
+  descontos: {
+    camaraEspuma_m: number;
+    seloFlutuante_m: number;
+    total_m: number;
+  };
+  formula: string;
+  alertas: AlertaAPI2350[];
+}
+
+// ---------------------------------------------------------------------------
+// Cálculo automático de níveis OPS a partir do volume de resposta
+// ---------------------------------------------------------------------------
+
+/**
+ * Entrada para o cálculo automático de níveis OPS.
+ *
+ * A lógica desce a partir do H_fisico_max:
+ *   CH  = H_fisico_max − margem_CH   (mín. 76 mm normativo)
+ *   HH  = CH − max(76 mm, V_resposta/A)
+ *   AOPS= HH + margem_AOPS           (se houver AOPS)
+ *   MW  = HH − margem_MW
+ */
+export interface EntradaCalculoNiveisOPS {
+  H_fisico_max_m: number;
+  volume_resposta_m3: number;
+  A_m2: number;
+  /** Espaço entre H_fisico_max e CH [mm]. Mín. normativo: 76 mm (3 in). */
+  margemCH_mm: number;
+  /** Espaço entre HH e MW [mm]. Valor operacional definido pelo operador. */
+  margemMW_mm: number;
+  temAOPS: boolean;
+  /**
+   * Posição do AOPS acima de HH [mm].
+   * Se null → padrão: ponto médio entre HH e CH.
+   */
+  margemAOPS_acimadeHH_mm: number | null;
+}
+
+export interface ResultadoCalculoNiveisOPS {
+  CH_m: number;
+  HH_m: number;
+  AOPS_m: number | null;
+  MW_m: number;
+  /** Distância calculada CH − HH [mm] */
+  distancia_HH_CH_mm: number;
+  /** Distância mínima requerida para acomodar o volume de resposta [mm] */
+  distancia_requerida_mm: number;
+  alertas: AlertaAPI2350[];
+}

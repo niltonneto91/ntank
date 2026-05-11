@@ -128,6 +128,11 @@ export default function NovoAPI2350Page() {
       H_util_m: H_util,
       usarVPorMm,
       vPorMm_m3_mm: usarVPorMm ? vPorMm : null,
+      // Novos campos — defaults; configurados na tela de cálculo
+      temCamaraEspuma: false,
+      distCamaraEspuma_m: null,
+      temSeloFlutuanteInterno: false,
+      diametroBoia_m: null,
     };
     projeto.produto.nome      = nomeProduto;
     projeto.produto.classeNFPA = classeNFPA;

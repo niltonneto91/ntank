@@ -74,6 +74,40 @@ export interface GeometriaAPI2350 {
   usarVPorMm: boolean;
   /** Volume por milímetro na zona superior [m³/mm] */
   vPorMm_m3_mm: number | null;
+
+  // --- Limitadores do nível físico máximo ---
+  /** Possui câmara de espuma no topo do tanque? */
+  temCamaraEspuma: boolean;
+  /**
+   * Distância da borda inferior da câmara de espuma ao teto interno [m].
+   * Esse espaço é descontado de H_total para determinar o nível físico máximo.
+   */
+  distCamaraEspuma_m: number | null;
+  /** Possui selo flutuante interno (IFR)? */
+  temSeloFlutuanteInterno: boolean;
+  /**
+   * Diâmetro da boia do selo flutuante [m].
+   * O produto não pode ultrapassar H_total − dist_câmara − diâmetro_boia.
+   */
+  diametroBoia_m: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Configuração para cálculo automático de níveis OPS
+// ---------------------------------------------------------------------------
+
+export interface ConfigNiveisAutomaticos {
+  /** Modo de definição dos níveis */
+  modo: "manual" | "automatico";
+  /** Espaço entre H_fisico_max e CH [mm]. Mínimo normativo: 76 mm (3 in). */
+  margemCH_mm: number;
+  /** Espaço entre HH e MW [mm]. Valor operacional. */
+  margemMW_mm: number;
+  /**
+   * Posição do AOPS acima de HH [mm].
+   * null → ponto médio entre HH e CH (padrão).
+   */
+  margemAOPS_acimadeHH_mm: number | null;
 }
 
 export interface ProdutoAPI2350 {
@@ -183,6 +217,8 @@ export interface ProjetoAPI2350 {
   produto: ProdutoAPI2350;
   operacao: OperacaoAPI2350;
   tempoResposta: TempoRespostaAPI2350;
+  /** Configuração do modo de cálculo de níveis (manual vs automático) */
+  configNiveis: ConfigNiveisAutomaticos;
   niveis: NiveisAPI2350;
   ops: OpsAPI2350;
   monitoramento: MonitoramentoAPI2350;
@@ -252,6 +288,10 @@ export function criarProjetoAPI2350(
       H_util_m: 11.5,
       usarVPorMm: false,
       vPorMm_m3_mm: null,
+      temCamaraEspuma: false,
+      distCamaraEspuma_m: null,
+      temSeloFlutuanteInterno: false,
+      diametroBoia_m: null,
     },
 
     produto: {
@@ -277,6 +317,13 @@ export function criarProjetoAPI2350(
     },
 
     tempoResposta: { ...TEMPO_RESPOSTA_DEFAULT },
+
+    configNiveis: {
+      modo: "automatico",
+      margemCH_mm: 200,   // 200 mm entre H_fisico_max e CH (≥76 mm normativo)
+      margemMW_mm: 500,   // 500 mm entre HH e MW (operacional)
+      margemAOPS_acimadeHH_mm: null, // padrão: ponto médio HH–CH
+    },
 
     niveis: {
       H_fisico_max_m: 11.8,
