@@ -212,13 +212,13 @@ function Subtitulo({ titulo }: { titulo: string }) {
   return <Text style={s.h3}>{titulo}</Text>;
 }
 
-function HeaderPagina({ tag, norma }: { tag: string; norma: string }) {
+function HeaderPagina({ tag }: { tag: string }) {
   return (
     <View style={s.header} fixed>
       <Text style={s.headerMarca}>
         <Text style={s.headerVerde}>N</Text>TANK — API 2350
       </Text>
-      <Text style={s.headerInfo}>{tag} · {norma}</Text>
+      <Text style={s.headerInfo}>{tag}</Text>
     </View>
   );
 }
@@ -323,7 +323,7 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
           PÁGINA 2 — DADOS DE ENTRADA
       ================================================================ */}
       <Page size="A4" style={s.page}>
-        <HeaderPagina tag={p.tagTanque} norma={p.normaContrucao} />
+        <HeaderPagina tag={p.tagTanque} />
 
         <Secao titulo="1. Identificação e dados de entrada" />
 
@@ -426,7 +426,7 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
           PÁGINA 3 — CÁLCULOS
       ================================================================ */}
       <Page size="A4" style={s.page}>
-        <HeaderPagina tag={p.tagTanque} norma={p.normaContrucao} />
+        <HeaderPagina tag={p.tagTanque} />
 
         <Secao titulo="2. Cálculos" />
 
@@ -519,7 +519,7 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
           PÁGINA 4 — NÍVEIS E CATEGORIA
       ================================================================ */}
       <Page size="A4" style={s.page}>
-        <HeaderPagina tag={p.tagTanque} norma={p.normaContrucao} />
+        <HeaderPagina tag={p.tagTanque} />
 
         <Secao titulo="3. Verificação de níveis operacionais" />
 
@@ -619,11 +619,15 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
         <Secao titulo="4. Classificação da categoria OPS" />
 
         {/* Caixa de categoria */}
-        <View style={[s.catCaixa, { borderColor: catCor.borderColor }]}>
-          <Text style={[s.catNumero, { color: catCor.color }]}>
-            Categoria {c.categoriaRes.categoria}
-          </Text>
-          <Text style={s.catTipo}>Tipo OPS: {c.categoriaRes.tipoOPS}</Text>
+        <View style={[s.catCaixa, { borderColor: catCor.borderColor, alignItems: "center" }]}>
+          <View style={{ alignItems: "center" }}>
+            <Text style={[s.catNumero, { color: catCor.color }]}>
+              {"Categoria " + c.categoriaRes.categoria}
+            </Text>
+          </View>
+          <View style={{ alignItems: "center" }}>
+            <Text style={s.catTipo}>{"Tipo OPS: " + c.categoriaRes.tipoOPS}</Text>
+          </View>
         </View>
 
         <Text style={{ fontSize: 9, marginBottom: 6, color: CARBONO_700 }}>
@@ -690,7 +694,7 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
           PÁGINA 5 — CHECKLIST DE CONFORMIDADE
       ================================================================ */}
       <Page size="A4" style={s.page}>
-        <HeaderPagina tag={p.tagTanque} norma={p.normaContrucao} />
+        <HeaderPagina tag={p.tagTanque} />
 
         <Secao titulo="5. Checklist de conformidade" />
 
@@ -893,6 +897,82 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
         </View>
 
         <RodapePagina projeto={p} />
+      </Page>
+
+      {/* ================================================================
+          PÁGINA 6 — CTA NTN ENGENHARIA
+      ================================================================ */}
+      <Page size="A4" style={s.pageCapa}>
+        <View style={s.capaTopo} />
+        <View style={[s.capaCorpo, { justifyContent: "space-between" }]}>
+
+          {/* Marca e tagline */}
+          <View>
+            <Text style={[s.capaMarca, { fontSize: 32 }]}>
+              NTN <Text style={s.capaMarcaV}>ENGENHARIA</Text>
+            </Text>
+            <Text style={[s.capaSub, { marginTop: 6, fontSize: 13, color: VERDE }]}>
+              Inovação que Faz a Diferença
+            </Text>
+            <Text style={[s.capaSub, { marginTop: 4, color: CARBONO_300, fontSize: 10 }]}>
+              Especialistas em construção e montagem de bases e terminais de combustíveis
+            </Text>
+          </View>
+
+          {/* Bloco central: o que fazemos */}
+          <View style={{ marginTop: 40 }}>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 11, color: VERDE, marginBottom: 10 }}>
+              COMO PODEMOS AJUDAR SUA EMPRESA
+            </Text>
+            {[
+              "Projetos de bases de combustíveis (ANP, Bombeiros, órgãos ambientais)",
+              "Construção civil e fundações para tanques e plataformas",
+              "Fabricação e montagem de tanques (NBR 7821 · API 650 · Inox)",
+              "Tubulações, bombas, selos flutuantes e sistemas de incêndio",
+              "Instalações elétricas e automação em áreas classificadas",
+              "Pintura e jateamento industrial (airless, abrasivo, hidrojato)",
+            ].map((item, i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 6 }}>
+                <Text style={{ color: VERDE, fontFamily: "Helvetica-Bold", fontSize: 10, marginRight: 6 }}>▸</Text>
+                <Text style={{ fontSize: 9.5, color: "#FFFFFF", flex: 1, lineHeight: 1.4 }}>{item}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Contato */}
+          <View style={{ marginTop: 32, paddingTop: 16, borderTopColor: VERDE, borderTopWidth: 1 }}>
+            <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 10, color: VERDE, marginBottom: 10, letterSpacing: 1 }}>
+              ENTRE EM CONTATO
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 0 }}>
+              {[
+                ["Site",      "www.ntnengenharia.com.br"],
+                ["Blog",      "blog.ntnengenharia.com.br"],
+                ["E-mail",    "contato@ntnengenharia.com.br"],
+                ["Telefone",  "(19) 2932-5678 / (13) 99770-7421"],
+                ["LinkedIn",  "linkedin.com/company/ntnengenharia"],
+                ["Endereço",  "Av. José Paulino, 1456 – Sala 04 – Paulínia/SP"],
+              ].map(([label, valor]) => (
+                <View key={label} style={{ width: "50%", marginBottom: 8 }}>
+                  <Text style={{ fontSize: 7.5, color: CARBONO_300, marginBottom: 1 }}>{label}</Text>
+                  <Text style={{ fontSize: 9, color: "#FFFFFF", fontFamily: "Helvetica-Bold" }}>{valor}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Rodapé da capa */}
+          <View style={[s.capaRodape, { marginTop: 24 }]}>
+            <Text style={[s.capaRodapeTxt, { fontSize: 7.5, color: CARBONO_300 }]}>
+              Documento gerado pelo NTANK — calculadora técnica da NTN Engenharia.
+              Este documento é de uso interno do cliente e não pode ser reproduzido sem autorização.
+            </Text>
+            <Text style={[s.capaRodapeTxt, { marginTop: 3, fontSize: 7, color: "#555" }]}>
+              CNPJ 34.986.789/0001-13 · Fundada em 2019 · +15 anos de experiência em engenharia industrial
+            </Text>
+          </View>
+
+        </View>
       </Page>
     </Document>
   );
