@@ -118,6 +118,33 @@ export type {
   ResultadoReforco,
 } from "./bocais.js";
 
+// === Soldagem, Pintura e Lista de Materiais ===
+export { calcularSoldagem, PROCESSOS_SOLDAGEM } from "./soldagem.js";
+export type {
+  ComponenteSoldagem,
+  ConsumivelSoldagem,
+  EntradaSoldagem,
+  JuntaSoldagem,
+  ProcessoSoldagem,
+  ResultadoSoldagem,
+} from "./soldagem.js";
+
+export { calcularPintura, CONFIG_PINTURA_DEFAULT } from "./pintura.js";
+export type {
+  ConfigDemao,
+  ConfigPintura,
+  EntradaPintura,
+  ResultadoDemao,
+  ResultadoPintura,
+} from "./pintura.js";
+
+export { calcularListaMateriais } from "./lista-materiais.js";
+export type {
+  EntradaListaMateriais,
+  ItemListaMateriais,
+  ListaMateriais,
+} from "./lista-materiais.js";
+
 // === Fase 5 — Escadas, plataformas e guarda-corpos ===
 export {
   calcularAcessorios,

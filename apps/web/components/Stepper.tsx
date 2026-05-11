@@ -8,15 +8,21 @@ export type EtapaId =
   | "bocais"
   | "acessorios"
   | "comparativo"
-  | "detalhes";
+  | "detalhes"
+  | "materiais"
+  | "soldagem"
+  | "pintura";
 
 const ETAPAS: ReadonlyArray<{ id: EtapaId; label: string }> = [
-  { id: "geometria", label: "Geometria" },
-  { id: "parametros", label: "Parâmetros" },
-  { id: "bocais", label: "Bocais" },
-  { id: "acessorios", label: "Acessórios" },
+  { id: "geometria",   label: "Geometria" },
+  { id: "parametros",  label: "Parâmetros" },
+  { id: "bocais",      label: "Bocais" },
+  { id: "acessorios",  label: "Acessórios" },
   { id: "comparativo", label: "Comparativo" },
-  { id: "detalhes", label: "Detalhes" },
+  { id: "detalhes",    label: "Detalhes" },
+  { id: "materiais",   label: "Materiais" },
+  { id: "soldagem",    label: "Soldagem" },
+  { id: "pintura",     label: "Pintura" },
 ];
 
 interface StepperProps {

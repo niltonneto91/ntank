@@ -29,8 +29,7 @@ export interface ParametrosProjeto {
   G: number;
   /** Sobrespessura de corrosão do COSTADO (mm). */
   CA_mm: number;
-  /** Aplicar CA também no fundo? Default false (fundo geralmente fica
-   *  preservado pela inundação no costado). */
+  /** Aplicar CA também no fundo? Default false. */
   aplicarCAFundo?: boolean;
   /** Sobrespessura de corrosão do fundo (mm). Usado se aplicarCAFundo. */
   CA_fundo_mm?: number;
@@ -40,10 +39,18 @@ export interface ParametrosProjeto {
   CA_teto_mm?: number;
   /** ID do material (ver MATERIAIS em @ntank/calc-core). */
   materialId: string;
-  /** Largura da chapa (mm) — 1500 / 1800 / 2000 / 2440 / 2550. */
+  /** Largura da chapa do COSTADO (mm) — 1500 / 1800 / 2000 / 2440 / 2550. */
   larguraChapa_mm: number;
-  /** Comprimento da chapa (mm) — 6000 / 12000. */
+  /** Comprimento da chapa do COSTADO (mm) — 6000 / 12000. */
   comprimentoChapa_mm: number;
+  /** Largura da chapa do FUNDO (mm). Default = larguraChapa_mm. */
+  larguraChapaFundo_mm?: number;
+  /** Comprimento da chapa do FUNDO (mm). Default = comprimentoChapa_mm. */
+  comprimentoChapaFundo_mm?: number;
+  /** Largura da chapa do TETO (mm). Default = larguraChapa_mm. */
+  larguraChapaTeto_mm?: number;
+  /** Comprimento da chapa do TETO (mm). Default = comprimentoChapa_mm. */
+  comprimentoChapaTeto_mm?: number;
   /** Eficiência de junta E. */
   E: number;
   /** Custo do aço (R$/kg) para comparativo. */
@@ -53,6 +60,62 @@ export interface ParametrosProjeto {
   /** Produto armazenado (texto livre — "Etanol", "Diesel S10"…). */
   produto: string;
 }
+
+// ===== Soldagem e Pintura =====
+
+export type ProcessoSoldagem = "SMAW" | "GMAW" | "FCAW";
+
+export interface SoldagemProjeto {
+  processoCostado: ProcessoSoldagem;
+  processoFundo: ProcessoSoldagem;
+  processoTeto: ProcessoSoldagem;
+  processoAcessorios: ProcessoSoldagem;
+  /** Custo do eletrodo revestido (SMAW) — R$/kg. */
+  custoEletrodo_R$_kg: number;
+  /** Custo do arame (GMAW/FCAW) — R$/kg. */
+  custoArame_R$_kg: number;
+  /** Custo do gás de proteção (CO₂ / Ar-CO₂) — R$/m³. */
+  custoGasProtecao_R$_m3: number;
+  /** Custo do O₂ para oxicorte — R$/kg. */
+  custoOxigenio_R$_kg: number;
+  /** Custo do acetileno para oxicorte — R$/m³. */
+  custoAcetileno_R$_m3: number;
+  /** Custo do disco de corte/desbaste — R$/un. */
+  custoDisco_R$_un: number;
+}
+
+export interface DemaoPintura {
+  espessura_um: number;    // espessura seca (µm)
+  rendimento_m2_L: number; // rendimento da tinta (m²/L)
+  custo_R$_L: number;      // custo por litro (R$/L)
+}
+
+export interface PinturaProjeto {
+  plano: "2-demaos" | "3-demaos";
+  primer: DemaoPintura;
+  intermediario: DemaoPintura; // só no plano 3-demãos
+  acabamento: DemaoPintura;
+}
+
+export const SOLDAGEM_DEFAULT: SoldagemProjeto = {
+  processoCostado: "SMAW",
+  processoFundo: "SMAW",
+  processoTeto: "SMAW",
+  processoAcessorios: "SMAW",
+  custoEletrodo_R$_kg: 12,
+  custoArame_R$_kg: 18,
+  custoGasProtecao_R$_m3: 8,
+  custoOxigenio_R$_kg: 5,
+  custoAcetileno_R$_m3: 25,
+  custoDisco_R$_un: 8,
+};
+
+export const PINTURA_DEFAULT: PinturaProjeto = {
+  plano: "2-demaos",
+  primer:        { espessura_um: 120, rendimento_m2_L: 6, custo_R$_L: 0 },
+  intermediario: { espessura_um: 50,  rendimento_m2_L: 8, custo_R$_L: 0 },
+  acabamento:    { espessura_um: 70,  rendimento_m2_L: 8, custo_R$_L: 0 },
+};
 
 // ===== Bloco 2 — Fundo e teto (Fase 3) =====
 
@@ -217,6 +280,12 @@ export interface ProjetoNTANK {
   acessorios: AcessoriosProjeto;
   /** Variante escolhida pelo usuário (sobrescreve a recomendação). */
   variantePreferida?: "NBR 7821 Simplificada" | "API 650 1-Foot" | "API 650 VDP";
+  /** Selo flutuante interno: suprime VPV e adiciona ventiladores no teto. */
+  seloFlutuante?: boolean;
+  /** Parâmetros de soldagem (processos + custos de consumíveis). */
+  soldagem?: SoldagemProjeto;
+  /** Parâmetros de pintura (plano, espessuras, rendimentos, custos). */
+  pintura?: PinturaProjeto;
 }
 
 export const PARAMETROS_DEFAULT: ParametrosProjeto = {
@@ -265,6 +334,9 @@ export function criarProjeto(parcial?: Partial<ProjetoNTANK>): ProjetoNTANK {
       plataformas: [...ACESSORIOS_DEFAULT.plataformas],
     },
     variantePreferida: parcial?.variantePreferida,
+    seloFlutuante: parcial?.seloFlutuante,
+    soldagem: parcial?.soldagem,
+    pintura: parcial?.pintura,
   };
 }
 
@@ -309,5 +381,8 @@ export function migrarProjeto(p: ProjetoNTANK): ProjetoNTANK {
           escada: { ...ACESSORIOS_DEFAULT.escada },
           plataformas: [],
         },
+    seloFlutuante: p.seloFlutuante,
+    soldagem: p.soldagem,
+    pintura: p.pintura,
   };
 }

@@ -150,7 +150,7 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <SelectField
-            label="Largura da chapa"
+            label="Largura da chapa — Costado"
             value={p.larguraChapa_mm}
             onChange={(v) => setParam("larguraChapa_mm", Number(v))}
             options={[
@@ -167,7 +167,7 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
             }
           />
           <SelectField
-            label="Comprimento da chapa"
+            label="Comprimento da chapa — Costado"
             value={p.comprimentoChapa_mm}
             onChange={(v) => setParam("comprimentoChapa_mm", Number(v))}
             options={[
@@ -176,6 +176,54 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
             ]}
             hint="Usado no aproveitamento da circunferência."
           />
+        </div>
+
+        <div className="mt-4 rounded-md border border-carbono-200 bg-creme p-3">
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-carbono-500">
+            Chapas de fundo e teto (para cálculo de soldas e lista de materiais)
+          </h4>
+          <div className="grid gap-3 md:grid-cols-4">
+            <SelectField
+              label="Largura — Fundo"
+              value={p.larguraChapaFundo_mm ?? p.larguraChapa_mm}
+              onChange={(v) => setParam("larguraChapaFundo_mm", Number(v))}
+              options={[
+                { value: 1200, label: "1.200 mm" },
+                { value: 1500, label: "1.500 mm" },
+                { value: 2000, label: "2.000 mm" },
+                { value: 2440, label: "2.440 mm" },
+              ]}
+            />
+            <SelectField
+              label="Comprimento — Fundo"
+              value={p.comprimentoChapaFundo_mm ?? p.comprimentoChapa_mm}
+              onChange={(v) => setParam("comprimentoChapaFundo_mm", Number(v))}
+              options={[
+                { value: 6000, label: "6.000 mm" },
+                { value: 12000, label: "12.000 mm" },
+              ]}
+            />
+            <SelectField
+              label="Largura — Teto"
+              value={p.larguraChapaTeto_mm ?? p.larguraChapa_mm}
+              onChange={(v) => setParam("larguraChapaTeto_mm", Number(v))}
+              options={[
+                { value: 1200, label: "1.200 mm" },
+                { value: 1500, label: "1.500 mm" },
+                { value: 2000, label: "2.000 mm" },
+                { value: 2440, label: "2.440 mm" },
+              ]}
+            />
+            <SelectField
+              label="Comprimento — Teto"
+              value={p.comprimentoChapaTeto_mm ?? p.comprimentoChapa_mm}
+              onChange={(v) => setParam("comprimentoChapaTeto_mm", Number(v))}
+              options={[
+                { value: 6000, label: "6.000 mm" },
+                { value: 12000, label: "12.000 mm" },
+              ]}
+            />
+          </div>
         </div>
 
         <div className="mt-4 rounded-md border border-carbono-200 bg-creme p-3">
@@ -350,6 +398,32 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
           {teto.tipo === "dome-autoportante" &&
             "Espessura calculada por t = R_dome / 1,776 (forma reduzida API 650 5.10.6 atmosférico)."}
         </div>
+      </Card>
+
+      <Card title="Bloco 4 — Selo flutuante (opcional)">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={projeto.seloFlutuante ?? false}
+            onChange={(e) =>
+              atualizar((proj) => ({ ...proj, seloFlutuante: e.target.checked }))
+            }
+            className="h-4 w-4 accent-verde"
+          />
+          <span className="font-medium">Tanque com selo flutuante interno</span>
+        </label>
+        <p className="mt-2 text-xs text-carbono-600">
+          O selo flutuante reduz a emissão de vapores ao manter o produto sempre
+          em contato com a vedação. Quando ativo, o VPV (ventilador de pressão e
+          vácuo) não se aplica.
+        </p>
+        {(projeto.seloFlutuante ?? false) && (
+          <div className="mt-2 rounded-md border border-verde-200 bg-verde-50 p-3 text-xs text-carbono-700">
+            <strong>Com selo flutuante:</strong> VPV suprimido. Prever{" "}
+            <strong>4 ventilações 400 × 1.300 mm</strong> no costado (nível
+            superior) para alívio de pressão e vácuo conforme API 650 Apêndice H.
+          </div>
+        )}
       </Card>
 
       <div className="flex justify-between">

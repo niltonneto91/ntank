@@ -833,8 +833,8 @@ export default function ProjetoDetalhesPage({ params }: PageProps) {
         <Link href={`/projeto/${projeto.id}/comparativo`}>
           <Button variant="ghost">← Comparativo</Button>
         </Link>
-        <Link href="/">
-          <Button>Concluir → Lista de projetos</Button>
+        <Link href={`/projeto/${projeto.id}/materiais`}>
+          <Button>Lista de Materiais →</Button>
         </Link>
       </div>
     </div>

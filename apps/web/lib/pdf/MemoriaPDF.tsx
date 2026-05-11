@@ -643,10 +643,16 @@ export function MemoriaPDF({
           ))}
         </View>
 
-        <Text style={styles.h3}>
-          Memória de cálculo — Anel 1 (mais carregado)
-        </Text>
-        <Memoria memoria={resultado.costado.aneis[0]!.memoriaCalculo} />
+        <Text style={styles.h3}>Memória de cálculo — por anel</Text>
+        {resultado.costado.aneis.map((a) => (
+          <View key={a.indice} wrap={false}>
+            <Text style={[styles.h3, { marginTop: 6 }]}>
+              Anel {a.indice} —{" "}
+              {a.indice === 1 ? "mais carregado (base)" : `H ef. = ${fmtNum(a.H_efetiva_m)} m`}
+            </Text>
+            <Memoria memoria={a.memoriaCalculo} />
+          </View>
+        ))}
 
         <Text style={styles.h3}>Resumo do costado</Text>
         <KV

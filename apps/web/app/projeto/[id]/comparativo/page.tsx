@@ -102,6 +102,23 @@ export default function ProjetoComparativoPage({ params }: PageProps) {
         })()}
       </Card>
 
+      {/* Nota de selo flutuante */}
+      {projeto.seloFlutuante && (
+        <Card>
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-lg">🔵</span>
+            <div className="text-sm">
+              <strong>Selo flutuante ativo</strong> — VPV (ventilador de pressão
+              e vácuo) não se aplica a este tanque. Prever{" "}
+              <strong>4 ventilações 400 × 1.300 mm</strong> no costado (nível
+              superior) para alívio de pressão e vácuo conforme API 650
+              Apêndice H. As ventilações não alteram o peso de aço do
+              comparativo.
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-3 md:grid-cols-3">
         {comparativo.variantes.map((v) => {
           const r = v.resultado;
