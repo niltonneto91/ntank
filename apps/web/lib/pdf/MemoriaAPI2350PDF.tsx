@@ -25,6 +25,8 @@ import type {
   ResultadoVolumeRespostaAPI2350,
   ResultadoNiveisAPI2350,
   ResultadoCategoriaAPI2350,
+  ResultadoGeometriaFisicaAPI2350,
+  ResultadoCalculoNiveisOPS,
 } from "@ntank/calc-core";
 import type { ProjetoAPI2350 } from "@/lib/api2350-projeto";
 
@@ -43,20 +45,32 @@ const CREME         = "#ECECE3";
 // Props do componente
 // ---------------------------------------------------------------------------
 
+export interface NiveisEfetivosAPI2350 {
+  H_fisico_max_m: number;
+  CH_m: number;
+  AOPS_m: number | null;
+  HH_m: number;
+  H_m: number | null;
+  MW_m: number;
+}
+
 export interface CalculoAPI2350 {
   escopoRes:     ResultadoEscopoAPI2350;
+  geoFisicaRes:  ResultadoGeometriaFisicaAPI2350;
   taxaRes:       ResultadoTaxaSubidaAPI2350;
   tempoRes:      ResultadoTempoRespostaAPI2350;
   volRes:        ResultadoVolumeRespostaAPI2350;
+  niveisCalcRes: ResultadoCalculoNiveisOPS | null; // null = modo manual
+  niveisEfetivos: NiveisEfetivosAPI2350;
   niveisRes:     ResultadoNiveisAPI2350;
   categoriaRes:  ResultadoCategoriaAPI2350;
   Q_efetiva:     number;
   t_disponivel_min: number;
-  // Fase 2B — cenário conservador vs. líquido
+  // Cenário conservador vs. líquido
   Q_liquida:            number | null;
   volResLiquido:        ResultadoVolumeRespostaAPI2350 | null;
   t_disponivel_liquido: number | null;
-  // Fase 2B — checklist de conformidade
+  // Checklist de conformidade
   conformidade: {
     escopo:          boolean;
     escopoReqAval:   boolean;
@@ -315,15 +329,35 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
 
         <Subtitulo titulo="Tanque" />
         <View style={s.table}>
-          {[
-            ["Tag",                    p.tagTanque],
-            ["Tipo de tanque",         p.geometria.tipoTanque],
-            ["Diâmetro interno D",     `${p.geometria.D_m} m`],
-            ["Altura total H",         `${p.geometria.H_total_m} m`],
-            ["Altura útil (calibrada)",`${p.geometria.H_util_m} m`],
-            ["Área transversal A",     `${fmtN3(c.taxaRes.A_m2)} m²`],
-            ["Cálculo de V/mm",        p.geometria.usarVPorMm ? `Manual: ${p.geometria.vPorMm_m3_mm} m³/mm` : "Geométrico (π·D²/4)"],
-          ].map(([l, v], i, arr) => (
+          {((): [string, string][] => {
+            const rows: [string, string][] = [
+              ["Tag",                    p.tagTanque],
+              ["Tipo de tanque",         p.geometria.tipoTanque],
+              ["Diâmetro interno D",     `${p.geometria.D_m} m`],
+              ["Altura total do costado",`${p.geometria.H_total_m} m`],
+              ["Altura útil (calibrada)",`${p.geometria.H_util_m} m`],
+              ["Área transversal A",     `${fmtN3(c.taxaRes.A_m2)} m²`],
+              ["Cálculo de V/mm",        p.geometria.usarVPorMm ? `Manual: ${p.geometria.vPorMm_m3_mm} m³/mm` : "Geométrico (π·D²/4)"],
+            ];
+            // Limitadores do nível físico máximo
+            rows.push(["Câmara de espuma (foam chamber)", p.geometria.temCamaraEspuma ? "Sim" : "Não"]);
+            if (p.geometria.temCamaraEspuma) {
+              rows.push(["  Dist. borda inferior câmara → teto",
+                p.geometria.distCamaraEspuma_m != null ? `${p.geometria.distCamaraEspuma_m} m` : "Não informado"]);
+            }
+            rows.push(["Selo flutuante interno (IFR)", p.geometria.temSeloFlutuanteInterno ? "Sim" : "Não"]);
+            if (p.geometria.temSeloFlutuanteInterno) {
+              rows.push(["  Diâmetro da boia do selo",
+                p.geometria.diametroBoia_m != null ? `${p.geometria.diametroBoia_m} m` : "Não informado"]);
+            }
+            // H_fisico_max após descontos
+            const desc = c.geoFisicaRes.descontos;
+            const descTxt = desc.total_m > 0
+              ? ` (${p.geometria.H_total_m} m${desc.camaraEspuma_m > 0 ? ` − câmara ${desc.camaraEspuma_m} m` : ""}${desc.seloFlutuante_m > 0 ? ` − boia ${desc.seloFlutuante_m} m` : ""})`
+              : "";
+            rows.push(["Nível físico máximo (transbordamento)", `${c.geoFisicaRes.H_fisico_max_m} m${descTxt}`]);
+            return rows;
+          })().map(([l, v], i, arr) => (
             <View key={l} style={i < arr.length - 1 ? s.tRow : s.tRowLast}>
               <Text style={s.tLabel}>{l}</Text>
               <Text style={s.tValue}>{v}</Text>
@@ -490,14 +524,53 @@ export function MemoriaAPI2350PDF({ projeto: p, calculo: c }: Props) {
         <Secao titulo="3. Verificação de níveis operacionais" />
 
         <Subtitulo titulo="3.1 Configuração de níveis" />
+
+        {/* Indicador do modo: automático ou manual */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <Text style={{ fontSize: 8, color: CARBONO_500 }}>Modo de definição:</Text>
+          <Text style={{
+            fontSize: 8,
+            fontFamily: "Helvetica-Bold",
+            color: c.niveisCalcRes ? "#166534" : "#1e3a5f",
+            backgroundColor: c.niveisCalcRes ? "#d1fae5" : "#dbeafe",
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 4,
+          }}>
+            {c.niveisCalcRes ? "⚡ Automático — calculado a partir do volume de resposta" : "✏ Manual — inserido pelo responsável"}
+          </Text>
+        </View>
+
+        {/* Se automático: margens usadas */}
+        {c.niveisCalcRes && (
+          <View style={{ backgroundColor: CREME, borderRadius: 3, padding: 6, marginBottom: 6 }}>
+            <Text style={{ fontSize: 7.5, fontFamily: "Helvetica-Bold", color: CARBONO_700, marginBottom: 3 }}>
+              Margens utilizadas no cálculo automático:
+            </Text>
+            <Text style={{ fontSize: 7.5, color: CARBONO_500 }}>
+              CH abaixo do máx. físico: <Text style={{ fontFamily: "Helvetica-Bold" }}>{p.configNiveis.margemCH_mm} mm</Text>
+              {"   "}MW abaixo do HH: <Text style={{ fontFamily: "Helvetica-Bold" }}>{p.configNiveis.margemMW_mm} mm</Text>
+              {p.ops.temAOPS && p.configNiveis.margemAOPS_acimadeHH_mm != null
+                ? `   AOPS acima do HH: ${p.configNiveis.margemAOPS_acimadeHH_mm} mm`
+                : p.ops.temAOPS ? "   AOPS: ponto médio HH–CH" : ""}
+            </Text>
+            {c.niveisCalcRes.distancia_requerida_mm > 76.2 && (
+              <Text style={{ fontSize: 7.5, color: CARBONO_500, marginTop: 2 }}>
+                Distância mínima efetiva HH→CH (gerada pelo volume de resposta):{"  "}
+                <Text style={{ fontFamily: "Helvetica-Bold" }}>{fmtN1(c.niveisCalcRes.distancia_requerida_mm)} mm</Text>
+              </Text>
+            )}
+          </View>
+        )}
+
         <View style={s.table}>
           {[
-            ["Nível físico máximo (transbordamento)",  `${p.niveis.H_fisico_max_m} m`],
-            ["CH — Critical High Level",               `${p.niveis.CH_m} m`],
-            ["AOPS (se presente)",                     p.niveis.AOPS_m != null ? `${p.niveis.AOPS_m} m` : "—"],
-            ["HH — High-High Level (LAHH)",            `${p.niveis.HH_m} m`],
-            ["H — High Level (opcional)",              p.niveis.H_m != null ? `${p.niveis.H_m} m` : "—"],
-            ["MW — Maximum Working Level",             `${p.niveis.MW_m} m`],
+            ["Nível físico máximo (transbordamento)",  `${c.niveisEfetivos.H_fisico_max_m} m`],
+            ["CH — Critical High Level",               `${c.niveisEfetivos.CH_m} m`],
+            ["AOPS (se presente)",                     c.niveisEfetivos.AOPS_m != null ? `${c.niveisEfetivos.AOPS_m} m` : "—"],
+            ["HH — High-High Level (LAHH)",            `${c.niveisEfetivos.HH_m} m`],
+            ["H — High Level (opcional)",              c.niveisEfetivos.H_m != null ? `${c.niveisEfetivos.H_m} m` : "—"],
+            ["MW — Maximum Working Level",             `${c.niveisEfetivos.MW_m} m`],
           ].map(([l, v], i, arr) => (
             <View key={l} style={i < arr.length - 1 ? s.tRow : s.tRowLast}>
               <Text style={s.tLabel}>{l}</Text>
