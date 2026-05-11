@@ -275,10 +275,11 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
               value={p.larguraChapaFundo_mm ?? p.larguraChapa_mm}
               onChange={(v) => setParam("larguraChapaFundo_mm", Number(v))}
               options={[
-                { value: 1200, label: "1.200 mm" },
                 { value: 1500, label: "1.500 mm" },
+                { value: 1800, label: "1.800 mm" },
                 { value: 2000, label: "2.000 mm" },
                 { value: 2440, label: "2.440 mm" },
+                { value: 2550, label: "2.550 mm" },
               ]}
             />
             <SelectField
@@ -295,11 +296,13 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
               value={p.larguraChapaTeto_mm ?? p.larguraChapa_mm}
               onChange={(v) => setParam("larguraChapaTeto_mm", Number(v))}
               options={[
-                { value: 1200, label: "1.200 mm" },
                 { value: 1500, label: "1.500 mm" },
+                { value: 1800, label: "1.800 mm" },
                 { value: 2000, label: "2.000 mm" },
                 { value: 2440, label: "2.440 mm" },
+                { value: 2550, label: "2.550 mm" },
               ]}
+              hint="Se o teto resultar em 3/16″ (4,75 mm), a largura é limitada automaticamente a 1.800 mm."
             />
             <SelectField
               label="Comprimento — Teto"
@@ -428,10 +431,11 @@ export default function ProjetoParametrosPage({ params }: PageProps) {
                 value={projeto.fundoDuplo?.larguraChapa_mm ?? (p.larguraChapaFundo_mm ?? p.larguraChapa_mm)}
                 onChange={(v) => setFundoDuplo("larguraChapa_mm", Number(v))}
                 options={[
-                  { value: 1200, label: "1.200 mm" },
                   { value: 1500, label: "1.500 mm" },
+                  { value: 1800, label: "1.800 mm" },
                   { value: 2000, label: "2.000 mm" },
                   { value: 2440, label: "2.440 mm" },
+                  { value: 2550, label: "2.550 mm" },
                 ]}
               />
               <SelectField

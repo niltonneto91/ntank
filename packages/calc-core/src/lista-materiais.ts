@@ -170,14 +170,21 @@ export function calcularListaMateriais(
 
   // ── Teto ─────────────────────────────────────────────────────────────────────
   {
-    const chapa  = resultado.teto.chapaComercial;
-    const areaUn = (largTeto / 1_000) * (comprTeto / 1_000);
+    const chapa = resultado.teto.chapaComercial;
+    // Chapas 3/16" (4,75 mm) só são fabricadas até 1.800 mm de largura.
+    // Se o usuário selecionou largura maior, corrigimos automaticamente aqui.
+    const LARGURA_MAX_3_16_MM = 1_800;
+    const largTetoEfetiva =
+      chapa.espessura === 4.75 && largTeto > LARGURA_MAX_3_16_MM
+        ? LARGURA_MAX_3_16_MM
+        : largTeto;
+    const areaUn = (largTetoEfetiva / 1_000) * (comprTeto / 1_000);
     const qtde   = arredondarChapas((resultado.teto.area_m2 / areaUn) * 1.15);
     itens.push({
       componente:     "Teto",
       espessura_mm:   chapa.espessura,
       polegada:       chapa.polegada,
-      largura_mm:     largTeto,
+      largura_mm:     largTetoEfetiva,   // corrigido para 1.800 mm quando 3/16"
       comprimento_mm: comprTeto,
       quantidade:     qtde,
       areaUnitaria_m2: Number(areaUn.toFixed(4)),

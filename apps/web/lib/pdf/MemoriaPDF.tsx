@@ -634,6 +634,14 @@ export function MemoriaPDF({
             ...(projeto.teto.R_dome_m !== undefined
               ? ([["Raio do dome", `${projeto.teto.R_dome_m} m`]] as const)
               : []),
+            ...(projeto.seloFlutuante
+              ? ([
+                  [
+                    "Selo flutuante",
+                    "Sim — VPV suprimido; prever 4 ventilações 400 × 1.300 mm no costado (API 650 Apênd. H)",
+                  ],
+                ] as const)
+              : []),
           ]}
         />
 
@@ -1152,14 +1160,14 @@ export function MemoriaPDF({
                 ]}
               />
               {/* Box de destaque com total */}
-              <View style={styles.destaqueBox}>
+              <View style={[styles.destaqueBox, { flexDirection: "column" }]}>
                 <Text style={[styles.destaqueLabel, { fontFamily: "Helvetica-Bold" }]}>
                   CUSTO TOTAL ESTIMADO (AÇO + MÃO DE OBRA)
                 </Text>
-                <Text style={styles.destaqueValor}>
+                <Text style={[styles.destaqueValor, { marginTop: 6, marginBottom: 6 }]}>
                   {fmtBRL.format(custoTotal)}
                 </Text>
-                <Text style={{ fontSize: 8, color: PRETO, marginTop: 4 }}>
+                <Text style={{ fontSize: 8, color: PRETO }}>
                   Total de aço: {fmtNum(resultado.pesoTotal_kg, 0)} kg
                 </Text>
               </View>

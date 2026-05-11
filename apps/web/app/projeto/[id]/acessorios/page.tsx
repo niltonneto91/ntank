@@ -166,7 +166,7 @@ export default function ProjetoAcessoriosPage({ params }: PageProps) {
         nome: `PLT-${cota.toFixed(0)}m`,
         cota_m: Number(cota.toFixed(2)),
         largura_m: 1.0,
-        comprimento_m: undefined,
+        comprimento_m: 1.0,  // comprimento padrão 1 m (patamar de passagem)
         comGuardaCorpo: true,
       });
       cota += 3;
@@ -177,7 +177,7 @@ export default function ProjetoAcessoriosPage({ params }: PageProps) {
       nome: "PLT-TOPO",
       cota_m: Number(H.toFixed(2)),
       largura_m: 1.0,
-      comprimento_m: undefined,
+      comprimento_m: 1.0,  // comprimento padrão 1 m; ajustar se necessário perímetro completo
       comGuardaCorpo: true,
     });
     setPlataformas(novas);
