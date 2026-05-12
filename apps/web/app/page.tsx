@@ -33,7 +33,7 @@ const MODULOS: ModuloCard[] = [
     titulo: "Ventilação Atmosférica",
     descricao:
       "Cálculo da capacidade de vent normal e de emergência (inbreathing / outbreathing). Cenários de enchimento, esvaziamento e incêndio.",
-    href: "/api2000/novo",
+    href: "/api2000/projetos",
     ativo: true,
     icone: "💨",
   },
@@ -42,7 +42,7 @@ const MODULOS: ModuloCard[] = [
     titulo: "Prevenção de Transbordamento",
     descricao:
       "Classificação OPS (Cat 0–3), tempo e volume de resposta, verificação de níveis MW/HH/AOPS/CH. Memória de cálculo em PDF.",
-    href: "/api2350/novo",
+    href: "/api2350/projetos",
     ativo: true,
     icone: "🚨",
   },

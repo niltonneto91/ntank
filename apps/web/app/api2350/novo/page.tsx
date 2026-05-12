@@ -286,7 +286,7 @@ export default function NovoAPI2350Page() {
       </Card>
 
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={() => router.push("/")}>
+        <Button variant="ghost" onClick={() => router.push("/api2350/projetos")}>
           Cancelar
         </Button>
         <Button onClick={handleCriar}>
