@@ -24,8 +24,8 @@ const MODULOS: ModuloCard[] = [
     titulo: "Inspeção de Tanque Existente",
     descricao:
       "Avaliação de integridade, vida útil remanescente, espessura mínima aceitável e re-rating de tanques em operação.",
-    href: "#",
-    ativo: false,
+    href: "/api653/projetos",
+    ativo: true,
     icone: "🔍",
   },
   {

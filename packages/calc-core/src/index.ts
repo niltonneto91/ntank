@@ -238,6 +238,40 @@ export type {
   ResultadoCalculoNiveisOPS,
 } from "./api2350/index.js";
 
+// === API 653 — Inspeção e Vida Útil de Tanques ===
+export {
+  calcularMASTCurso,
+  calcularMASTTodosCursos,
+  calcularTaxaCorrosao,
+  calcularTaxasCursos,
+  avaliarCostado,
+  calcularMAOLL,
+  avaliarFundo,
+  T_MIN_FUNDO_MM,
+  T_MIN_ANELAR_MM,
+  calcularProximaInspecao,
+} from "./api653/index.js";
+
+export type {
+  StatusCurso,
+  MetodologiaInspecao,
+  TipoCorrosao,
+  NivelAlertaAPI653,
+  AlertaAPI653,
+  CursoMedido,
+  EntradaMASTCurso,
+  ResultadoMASTCurso,
+  EntradaVerificacaoCurso,
+  ResultadoVerificacaoCurso,
+  EntradaAvaliacaoCostado,
+  ResultadoAvaliacaoCostado,
+  ResultadoMAOLL,
+  FundoMedido,
+  ResultadoAvaliacaoFundo,
+  ResultadoProximaInspecao,
+  ResultadoTaxaCorrosao,
+} from "./api653/index.js";
+
 // === Fase 5 — Escadas, plataformas e guarda-corpos ===
 export {
   calcularAcessorios,
