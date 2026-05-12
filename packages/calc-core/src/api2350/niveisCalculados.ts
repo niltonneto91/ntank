@@ -51,11 +51,11 @@ export function calcularNiveisOPS(
   const margemCH_efetiva_mm = Math.max(margemCH_mm, DIST_MIN_NORMATIVA_MM);
   if (margemCH_mm < DIST_MIN_NORMATIVA_MM) {
     alertas.push({
-      code: "N010",
+      code: "N020",
       nivel: "ALERTA",
       mensagem:
         `Margem CH informada (${margemCH_mm.toFixed(0)} mm) é menor que o mínimo ` +
-        `normativo de 76 mm (3 in). Usando 76 mm.`,
+        `normativo de 76,2 mm (3 in). Usando 76,2 mm.`,
     });
   }
   const CH_m = round3(Math.max(0, H_fisico_max_m - margemCH_efetiva_mm / 1000));
@@ -70,7 +70,7 @@ export function calcularNiveisOPS(
 
   if (HH_m <= 0) {
     alertas.push({
-      code: "N011",
+      code: "N021",
       nivel: "CRITICO",
       mensagem:
         "Nível HH calculado ≤ 0 m. O volume de resposta é muito grande para a geometria " +
@@ -88,11 +88,9 @@ export function calcularNiveisOPS(
         ? margemAOPS_acimadeHH_mm / 1000
         : zonaHH_CH_m / 2; // padrão: ponto médio
 
-    AOPS_m = round3(
-      Math.min(CH_m - DIST_MIN_NORMATIVA_MM / 1000, HH_m + margemUp_m),
-    );
-    // Garantir que AOPS fique dentro da zona HH–CH
-    AOPS_m = round3(Math.max(HH_m, Math.min(CH_m, AOPS_m)));
+    // Posicionar entre HH e (CH − margem mínima normativa); clampar ao intervalo [HH, CH]
+    const aopsRaw = Math.min(CH_m - DIST_MIN_NORMATIVA_MM / 1000, HH_m + margemUp_m);
+    AOPS_m = round3(Math.max(HH_m, Math.min(CH_m, aopsRaw)));
   }
 
   // --- 4. MW ----------------------------------------------------------------
@@ -101,7 +99,7 @@ export function calcularNiveisOPS(
 
   if (MW_m <= 0 && margemMW_mm > 0) {
     alertas.push({
-      code: "N012",
+      code: "N022",
       nivel: "ALERTA",
       mensagem:
         "Nível MW calculado ≤ 0 m com a margem MW informada. " +

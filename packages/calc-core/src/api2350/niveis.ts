@@ -22,14 +22,16 @@ import type {
 } from "./types.js";
 import { round2, round3, m_para_mm } from "./conversoes.js";
 
-/** Distância mínima normativa HH-CH: 3 inches = 76,2 mm → arredondado para 76 mm */
-const DISTANCIA_MINIMA_NORMATIVA_MM = 76 as const;
+/** Distância mínima normativa HH-CH: 3 in = 3 × 25,4 = 76,2 mm (API 2350 §5) */
+const DISTANCIA_MINIMA_NORMATIVA_MM = 76.2 as const;
 
 export function verificarNiveisAPI2350(
   entrada: EntradaNiveisAPI2350,
 ): ResultadoNiveisAPI2350 {
-  const { H_fisico_max_m, CH_m, AOPS_m, HH_m, H_m, MW_m, A_m2, volume_resposta_m3, temAOPS } =
-    entrada;
+  const {
+    H_fisico_max_m, CH_m, AOPS_m, HH_m, H_m, MW_m,
+    A_m2, volume_resposta_m3, temAOPS, Q_efetiva_m3h,
+  } = entrada;
 
   const alertas: AlertaAPI2350[] = [];
 
@@ -49,13 +51,13 @@ export function verificarNiveisAPI2350(
   );
 
   // ----- Tempo disponível entre HH e CH -----
-  // t_disponivel [min] = volume_disponivel [m³] / Q [m³/h] × 60
-  // volume_disponivel [m³] = distancia_CH_HH_mm / 1000 × A [m²]
-  // Este valor é calculado externamente com Q_efetiva; aqui calculamos só a base geométrica.
-  // O useMemo na página fará a divisão por Q_efetiva.
-  const volume_disponivel_m3 = round3((distancia_CH_HH_mm / 1000) * A_m2);
-  // Para exibição, deixamos como indicativo (sem Q aqui):
-  const tempo_disponivel_HH_CH_min = 0; // será calculado na camada de UI com Q_efetiva
+  // t_disponivel [min] = (dist_CH_HH [m] × A [m²]) / Q [m³/h] × 60
+  // Requer Q_efetiva_m3h na entrada; retorna 0 quando omitido.
+  const volume_disponivel_m3 = (distancia_CH_HH_mm / 1000) * A_m2;
+  const tempo_disponivel_HH_CH_min =
+    Q_efetiva_m3h && Q_efetiva_m3h > 0
+      ? round2((volume_disponivel_m3 / Q_efetiva_m3h) * 60)
+      : 0;
 
   // ----- Status: distância HH→CH -----
   let status_distancia_HH_CH: StatusVerificacao;
@@ -93,6 +95,8 @@ export function verificarNiveisAPI2350(
   }
 
   // ----- Status: MW abaixo de HH -----
+  // Requisito normativo API 2350: MW < HH (sem distância mínima especificada).
+  // A margem MW→HH < 76 mm é recomendação operacional (não normativa).
   let status_MW_abaixo_HH: StatusVerificacao;
   if (MW_m >= HH_m) {
     status_MW_abaixo_HH = "REPROVADO";
@@ -103,17 +107,18 @@ export function verificarNiveisAPI2350(
         `MW (${MW_m} m) está ACIMA ou NO MESMO NÍVEL do HH (${HH_m} m). ` +
         "Operar rotineiramente no nível HH não é aceitável — HH é camada de proteção, não controle de enchimento.",
     });
-  } else if (distancia_HH_MW_mm < 76) {
-    status_MW_abaixo_HH = "REPROVADO";
-    alertas.push({
-      code: "N005",
-      nivel: "ALERTA",
-      mensagem:
-        `Margem MW→HH (${distancia_HH_MW_mm} mm) é muito pequena. ` +
-        "Recomenda-se margem operacional maior para evitar acionamentos inadvertidos do alarme HH.",
-    });
   } else {
     status_MW_abaixo_HH = "APROVADO";
+    if (distancia_HH_MW_mm < 76.2) {
+      alertas.push({
+        code: "N005",
+        nivel: "ALERTA",
+        mensagem:
+          `Margem MW→HH (${distancia_HH_MW_mm.toFixed(1)} mm) é menor que 76 mm. ` +
+          "Recomendação operacional: aumentar margem para evitar acionamentos inadvertidos do alarme HH. " +
+          "(Não há distância mínima MW→HH na API 2350 — verificação somente operacional.)",
+      });
+    }
   }
 
   // ----- Status: AOPS -----
@@ -151,6 +156,8 @@ export function verificarNiveisAPI2350(
   }
 
   // ----- Status: CH abaixo do físico -----
+  // Requisito normativo API 2350: CH < H_fisico_max (sem folga mínima especificada).
+  // Folga < 50 mm é alerta operacional (não normativo).
   let status_CH_abaixo_fisico: StatusVerificacao;
   if (CH_m >= H_fisico_max_m) {
     status_CH_abaixo_fisico = "REPROVADO";
@@ -161,17 +168,18 @@ export function verificarNiveisAPI2350(
         `CH (${CH_m} m) está ACIMA ou NO MESMO NÍVEL físico máximo (${H_fisico_max_m} m). ` +
         "O CH deve estar abaixo do ponto de transbordamento real.",
     });
-  } else if (distancia_CH_fisico_mm < 50) {
-    status_CH_abaixo_fisico = "REPROVADO";
-    alertas.push({
-      code: "N010",
-      nivel: "ALERTA",
-      mensagem:
-        `Margem CH→nível físico (${distancia_CH_fisico_mm} mm) é muito pequena. ` +
-        "Verificar se há volume de borda suficiente após o CH.",
-    });
   } else {
     status_CH_abaixo_fisico = "APROVADO";
+    if (distancia_CH_fisico_mm < 50) {
+      alertas.push({
+        code: "N010",
+        nivel: "ALERTA",
+        mensagem:
+          `Folga CH→nível físico (${distancia_CH_fisico_mm.toFixed(1)} mm) é muito pequena. ` +
+          "Verificar se há freeboard suficiente após o CH. " +
+          "(A API 2350 não especifica folga mínima CH→físico — verificação somente operacional.)",
+      });
+    }
   }
 
   // Aviso geral (H level opcional)

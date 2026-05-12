@@ -162,7 +162,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo geométrico: D=10 m, Q=100 m³/h → A ≈ 78.54 m²", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,
-      H_util_m: 9,
       vazaoMax_m3h: 100,
     });
     // A = π × 10² / 4 = 25π ≈ 78.5398
@@ -173,7 +172,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo geométrico: taxa = (Q/60) / A × 1000", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,
-      H_util_m: 9,
       vazaoMax_m3h: 100,
     });
     // A ≈ 78.54; taxa = (100/60) / 78.54 × 1000 ≈ 21.22 mm/min
@@ -183,7 +181,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo geométrico: mm/h = taxa_mm_min × 60", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,
-      H_util_m: 9,
       vazaoMax_m3h: 100,
     });
     expect(r.taxaSubida_mm_h).toBeCloseTo(r.taxaSubida_mm_min * 60, 0);
@@ -192,7 +189,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo geométrico: in/h = mm_h / 25.4", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,
-      H_util_m: 9,
       vazaoMax_m3h: 100,
     });
     expect(r.taxaSubida_in_h).toBeCloseTo(r.taxaSubida_mm_h / IN_PARA_MM, 1);
@@ -201,7 +197,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo manual V/mm: 0.04 m³/mm, Q=100 m³/h → A_eq = 40 m²", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,       // ignorado no modo manual
-      H_util_m: 9,
       vazaoMax_m3h: 100,
       vPorMm_m3_mm: 0.04,
     });
@@ -215,7 +210,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo manual: V/mm=0 → usa modo geométrico como fallback", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,
-      H_util_m: 9,
       vazaoMax_m3h: 100,
       vPorMm_m3_mm: 0,
     });
@@ -225,7 +219,6 @@ describe("calcularTaxaSubidaNivel", () => {
   it("modo manual: V/mm=null → usa modo geométrico como fallback", () => {
     const r = calcularTaxaSubidaNivel({
       D_m: 10,
-      H_util_m: 9,
       vazaoMax_m3h: 100,
       vPorMm_m3_mm: null,
     });
@@ -233,13 +226,13 @@ describe("calcularTaxaSubidaNivel", () => {
   });
 
   it("dobrar Q dobra a taxa de subida", () => {
-    const r1 = calcularTaxaSubidaNivel({ D_m: 10, H_util_m: 9, vazaoMax_m3h: 100 });
-    const r2 = calcularTaxaSubidaNivel({ D_m: 10, H_util_m: 9, vazaoMax_m3h: 200 });
+    const r1 = calcularTaxaSubidaNivel({ D_m: 10, vazaoMax_m3h: 100 });
+    const r2 = calcularTaxaSubidaNivel({ D_m: 10, vazaoMax_m3h: 200 });
     expect(r2.taxaSubida_mm_min).toBeCloseTo(r1.taxaSubida_mm_min * 2, 2);
   });
 
   it("tanque 7,64 m — referência interna NTANK", () => {
-    const r = calcularTaxaSubidaNivel({ D_m: 7.64, H_util_m: 11.5, vazaoMax_m3h: 100 });
+    const r = calcularTaxaSubidaNivel({ D_m: 7.64, vazaoMax_m3h: 100 });
     // A = π × 7.64² / 4 ≈ 45.84 m² (variação na última casa conforme arredondamento)
     expect(r.A_m2).toBeGreaterThan(45.8);
     expect(r.A_m2).toBeLessThan(46.0);
@@ -430,7 +423,7 @@ describe("verificarNiveisAPI2350", () => {
 
   it("mínimo normativo sempre 76 mm (3 inches)", () => {
     const r = verificarNiveisAPI2350(NIVEIS_OK);
-    expect(r.distancia_minima_normativa_mm).toBe(76);
+    expect(r.distancia_minima_normativa_mm).toBe(76.2);
   });
 
   it("distância efetiva mínima = max(76, dist_requerida)", () => {
@@ -775,8 +768,8 @@ describe("calcularNiveisOPS", () => {
       temAOPS: false,
       margemAOPS_acimadeHH_mm: null,
     });
-    expect(r.alertas.some(a => a.code === "N010")).toBe(true);
-    // CH deve estar 76 mm abaixo do H_fisico_max (não 50 mm)
+    expect(r.alertas.some(a => a.code === "N020")).toBe(true);
+    // CH deve estar 76,2 mm abaixo do H_fisico_max (mínimo normativo 3 in)
     expect(r.CH_m).toBeCloseTo(11.8 - 0.0762, 2);
   });
 });

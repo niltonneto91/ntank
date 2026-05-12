@@ -308,7 +308,6 @@ export default function API2350Page({ params }: PageProps) {
 
     const taxaRes = calcularTaxaSubidaNivel({
       D_m:          p.geometria.D_m,
-      H_util_m:     p.geometria.H_util_m,
       vazaoMax_m3h: Q_efetiva,
       vPorMm_m3_mm: p.geometria.usarVPorMm ? p.geometria.vPorMm_m3_mm : null,
     });
@@ -366,6 +365,7 @@ export default function API2350Page({ params }: PageProps) {
       A_m2:               taxaRes.A_m2,
       volume_resposta_m3: volRes.volume_m3,
       temAOPS:            p.ops.temAOPS,
+      Q_efetiva_m3h:      Q_efetiva,
     });
 
     const categoriaRes = classificarCategoriaOPS({
@@ -378,11 +378,8 @@ export default function API2350Page({ params }: PageProps) {
       temAOPS:                       p.ops.temAOPS,
     });
 
-    // Tempo disponível entre HH e CH (calculado na UI com Q_efetiva)
-    const t_disponivel_min =
-      Q_efetiva > 0
-        ? Math.round(((niveisRes.distancia_CH_HH_mm / 1000) * taxaRes.A_m2) / Q_efetiva * 60 * 100) / 100
-        : 0;
+    // Tempo disponível entre HH e CH — calculado em calc-core (via Q_efetiva_m3h passado para verificarNiveisAPI2350)
+    const t_disponivel_min = niveisRes.tempo_disponivel_HH_CH_min;
 
     // --- Cenário de vazão líquida (conservador vs. informativo) ---
     // API 2350 recomenda abordagem conservadora (sem descontar saída).

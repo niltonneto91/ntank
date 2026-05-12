@@ -56,7 +56,6 @@ export interface ResultadoEscopoAPI2350 {
 
 export interface EntradaTaxaSubidaAPI2350 {
   D_m: number;
-  H_util_m: number;
   vazaoMax_m3h: number;
   /** Volume por milímetro na zona superior [m³/mm] — substitui o geométrico */
   vPorMm_m3_mm?: number | null;
@@ -143,6 +142,12 @@ export interface EntradaNiveisAPI2350 {
   volume_resposta_m3: number;
   /** Tanque possui AOPS? */
   temAOPS: boolean;
+  /**
+   * Vazão efetiva de recebimento [m³/h].
+   * Quando fornecida, permite calcular `tempo_disponivel_HH_CH_min`.
+   * Se omitida, `tempo_disponivel_HH_CH_min` retorna 0.
+   */
+  Q_efetiva_m3h?: number;
 }
 
 export interface ResultadoNiveisAPI2350 {
@@ -153,8 +158,9 @@ export interface ResultadoNiveisAPI2350 {
 
   // Distâncias requeridas
   distancia_requerida_mm: number;
-  distancia_minima_normativa_mm: 76;
-  distancia_efetiva_minima_mm: number;   // max(76, requerida)
+  /** Mínimo normativo: 3 in = 76,2 mm (API 2350 §5) */
+  distancia_minima_normativa_mm: 76.2;
+  distancia_efetiva_minima_mm: number;   // max(76.2, requerida)
 
   // Tempo disponível entre HH e CH
   tempo_disponivel_HH_CH_min: number;
