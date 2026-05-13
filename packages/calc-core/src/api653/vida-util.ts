@@ -69,12 +69,20 @@ export function avaliarCostado(
     const t_min_mm = mast.t_min_mm;
 
     // 2. Taxa de corrosão para este curso
+    // Preferir o campo 'historico' (multi-campanha); fallback para t_anterior/data_anterior (compat.)
+    const historico = c.historico && c.historico.length > 0
+      ? c.historico
+      : (c.t_anterior_mm != null && c.data_anterior
+          ? [{ t_mm: c.t_anterior_mm, data: c.data_anterior }]
+          : undefined);
+
     const taxa = calcularTaxaCorrosao(
       c.t_medida_mm,
       c.t_anterior_mm,
       c.data_anterior,
       dataInspecao,
       CR_assumida_mm_ano,
+      historico,
     );
     taxa.alertas.forEach((a) =>
       alertasCurso.push({ ...a, code: `${a.code}-C${c.numero}` }),
@@ -124,12 +132,21 @@ export function avaliarCostado(
 
     return {
       numero: c.numero,
+      altura_m: c.altura_m,
+      cota_base_m: cotas[idx] ?? 0,
+      H_liq_acima_m: mast.H_liq_acima_m,
       t_nominal_mm: c.t_nominal_mm,
       t_medida_mm: c.t_medida_mm,
+      t_anterior_mm: c.t_anterior_mm ?? null,
+      data_anterior: c.data_anterior ?? null,
       t_min_mm,
       t_perda_mm,
       t_sobra_mm,
+      CR_historica_mm_ano: taxa.CR_historica_mm_ano,
+      CR_assumida_mm_ano,
       CR_mm_ano: CR,
+      anos_entre_inspecoes: taxa.anos_entre_inspecoes,
+      n_medicoes: taxa.n_medicoes,
       RUL_anos,
       status,
       alertas: alertasCurso,

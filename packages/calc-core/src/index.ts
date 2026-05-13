@@ -244,11 +244,14 @@ export {
   calcularMASTTodosCursos,
   calcularTaxaCorrosao,
   calcularTaxasCursos,
+  calcularCRMultiHistorico,
   avaliarCostado,
   calcularMAOLL,
   avaliarFundo,
   T_MIN_FUNDO_MM,
   T_MIN_ANELAR_MM,
+  avaliarTeto,
+  T_MIN_TETO_MM,
   calcularProximaInspecao,
 } from "./api653/index.js";
 
@@ -258,6 +261,7 @@ export type {
   TipoCorrosao,
   NivelAlertaAPI653,
   AlertaAPI653,
+  MedicaoHistorica,
   CursoMedido,
   EntradaMASTCurso,
   ResultadoMASTCurso,
@@ -268,6 +272,8 @@ export type {
   ResultadoMAOLL,
   FundoMedido,
   ResultadoAvaliacaoFundo,
+  TetoMedido,
+  ResultadoAvaliacaoTeto,
   ResultadoProximaInspecao,
   ResultadoTaxaCorrosao,
 } from "./api653/index.js";

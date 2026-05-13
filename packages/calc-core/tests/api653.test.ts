@@ -314,6 +314,43 @@ describe("avaliarFundo", () => {
   it("constante T_MIN_ANELAR_MM = 6,0", () => {
     expect(T_MIN_ANELAR_MM).toBe(6.0);
   });
+
+  it("fundo com historico de 2 campanhas: CR calculado por dois pontos", () => {
+    // t_anterior = 5,0 mm em 2019-01-01 → 5 anos antes
+    // t_atual    = 4,5 mm em 2024-01-01
+    // CR = (5,0 - 4,5) / 5 = 0,1 mm/ano
+    // max(CR_hist, CR_assumida) = max(0,1; 0,05) = 0,1
+    const fundo: FundoMedido = {
+      t_nominal_mm: 6,
+      t_medida_mm: 4.5,
+      CR_assumida_mm_ano: 0.05,
+      historico: [{ t_mm: 5.0, data: "2019-01-01" }],
+    };
+    const r = avaliarFundo(fundo, "2024-01-01");
+    // CR = 0,1 mm/ano → RUL = (4,5 - 2,5) / 0,1 = 20 anos
+    expect(r.CR_mm_ano).toBeCloseTo(0.1, 2);
+    expect(r.RUL_anos).toBeCloseTo(20, 0);
+    expect(r.status).toBe("APROVADO");
+  });
+
+  it("fundo com historico de 3 campanhas: CR por regressão linear", () => {
+    // Três pontos com declínio uniforme de 0,2 mm/ano:
+    // 2014: 5,6 mm | 2019: 4,6 mm | atual 2024: 3,6 mm
+    const fundo: FundoMedido = {
+      t_nominal_mm: 6,
+      t_medida_mm: 3.6,
+      CR_assumida_mm_ano: 0.1,
+      historico: [
+        { t_mm: 4.6, data: "2019-01-01" },
+        { t_mm: 5.6, data: "2014-01-01" },
+      ],
+    };
+    const r = avaliarFundo(fundo, "2024-01-01");
+    // CR histórica ≈ 0,2 mm/ano (regressão) > CR_assumida 0,1 → adota 0,2
+    expect(r.CR_mm_ano).toBeCloseTo(0.2, 1);
+    // RUL = (3,6 - 2,5) / 0,2 ≈ 5,5 anos
+    expect(r.RUL_anos).toBeCloseTo(5.5, 0);
+  });
 });
 
 // ---------------------------------------------------------------------------

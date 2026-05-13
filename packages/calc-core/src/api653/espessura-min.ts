@@ -57,6 +57,7 @@ export function calcularMASTCurso(
 
   return {
     numero: numeroCurso,
+    H_liq_acima_m: round3(H_liq_acima_m),
     t_min_mm,
     formula: `t_min = 2,6 × D × H_liq × G / (S × E) = 2,6 × ${D_m} × ${round3(H_liq_acima_m)} × ${G} / (${S_MPa} × ${E}) = ${t_min_mm} mm`,
     referenciaNormativa: "API 653, 5ª ed., §4.3.2",

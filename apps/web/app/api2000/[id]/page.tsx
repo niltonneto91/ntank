@@ -94,6 +94,7 @@ function Alerta({ code, nivel, mensagem }: { code: string; nivel: string; mensag
 export default function API2000Page({ params }: PageProps) {
   const { id } = use(params);
   const { estado, atualizar } = useApi2000Projeto(id);
+  const [gerando, setGerando] = useState(false);
 
   // Cálculo reativo
   const calculo = useMemo(() => {
@@ -187,7 +188,6 @@ export default function API2000Page({ params }: PageProps) {
     return <Card><p className="text-sm text-red-700">Erro: {estado.mensagem}</p></Card>;
 
   const { projeto } = estado;
-  const [gerando, setGerando] = useState(false);
 
   // Função de download do PDF
   async function baixarPDF() {

@@ -41,6 +41,14 @@ export function avaliarFundo(
 ): ResultadoAvaliacaoFundo {
   const alertas: AlertaAPI653[] = [];
 
+  // Histórico efetivo: preferir campo 'historico'; fallback para par clássico
+  const historicoEfetivo =
+    fundo.historico && fundo.historico.length > 0
+      ? fundo.historico
+      : fundo.t_anterior_mm != null && fundo.data_anterior
+      ? [{ t_mm: fundo.t_anterior_mm, data: fundo.data_anterior }]
+      : undefined;
+
   // Taxa de corrosão do fundo
   const taxa = calcularTaxaCorrosao(
     fundo.t_medida_mm,
@@ -48,6 +56,7 @@ export function avaliarFundo(
     fundo.data_anterior,
     dataInspecao,
     fundo.CR_assumida_mm_ano,
+    historicoEfetivo,
   );
   taxa.alertas.forEach((a) => alertas.push({ ...a, code: `${a.code}-F` }));
   const CR = taxa.CR_adotada_mm_ano;

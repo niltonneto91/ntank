@@ -6,10 +6,11 @@
 
 // Cálculos
 export { calcularMASTCurso, calcularMASTTodosCursos } from "./espessura-min.js";
-export { calcularTaxaCorrosao, calcularTaxasCursos } from "./corrosao.js";
+export { calcularTaxaCorrosao, calcularTaxasCursos, calcularCRMultiHistorico } from "./corrosao.js";
 export { avaliarCostado } from "./vida-util.js";
 export { calcularMAOLL } from "./maoll.js";
 export { avaliarFundo, T_MIN_FUNDO_MM, T_MIN_ANELAR_MM } from "./fundo.js";
+export { avaliarTeto, T_MIN_TETO_MM } from "./teto.js";
 export { calcularProximaInspecao } from "./proxima-inspecao.js";
 
 // Conversões
@@ -32,6 +33,7 @@ export type {
   TipoCorrosao,
   NivelAlertaAPI653,
   AlertaAPI653,
+  MedicaoHistorica,
   CursoMedido,
   EntradaMASTCurso,
   ResultadoMASTCurso,
@@ -42,6 +44,8 @@ export type {
   ResultadoMAOLL,
   FundoMedido,
   ResultadoAvaliacaoFundo,
+  TetoMedido,
+  ResultadoAvaliacaoTeto,
   ResultadoProximaInspecao,
   ResultadoTaxaCorrosao,
 } from "./types.js";

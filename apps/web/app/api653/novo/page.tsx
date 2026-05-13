@@ -45,10 +45,10 @@ type CursoRascunho = {
   t_medida_mm: string;
 };
 
-function novoCurso(numero: number, alturaDefault: number): CursoRascunho {
+function novoCurso(numero: number): CursoRascunho {
   return {
     numero,
-    altura_m: alturaDefault.toFixed(2),
+    altura_m: "",
     t_nominal_mm: "",
     t_medida_mm: "",
   };
@@ -101,23 +101,21 @@ export default function NovaInspecaoAPI653Page() {
   const [H_liq_m, setHliq]               = useState(10);
 
   // --- Cursos (tabela dinâmica) ---
-  const [cursos, setCursos] = useState<CursoRascunho[]>(() => {
-    const altDefault = parseFloat((10 / 4).toFixed(2));
-    return Array.from({ length: 4 }, (_, i) => novoCurso(i + 1, altDefault));
-  });
+  const [cursos, setCursos] = useState<CursoRascunho[]>(() =>
+    Array.from({ length: 4 }, (_, i) => novoCurso(i + 1)),
+  );
 
-  // Regenerar tabela quando numCursos ou H_m mudar
+  // Regenerar tabela quando numCursos mudar (H_m não preenche mais automaticamente)
   useEffect(() => {
-    const altDefault = parseFloat((H_m / numCursos).toFixed(2));
     setCursos((prev) => {
       const novos: CursoRascunho[] = Array.from(
         { length: numCursos },
-        (_, i) => prev[i] ?? novoCurso(i + 1, altDefault),
+        (_, i) => prev[i] ?? novoCurso(i + 1),
       );
       // Renumerar
       return novos.map((c, i) => ({ ...c, numero: i + 1 }));
     });
-  }, [numCursos, H_m]);
+  }, [numCursos]);
 
   // Sincronizar H_liq com H_m quando H_m mudar
   useEffect(() => {
@@ -157,7 +155,7 @@ export default function NovaInspecaoAPI653Page() {
     const cursosParsed = parsearCursos(cursos);
     if (cursosParsed.length === 0) {
       alert(
-        "Preencha pelo menos altura, espessura nominal e medida de um curso.",
+        "Preencha pelo menos altura, espessura nominal e medida de um anel.",
       );
       return;
     }
@@ -198,7 +196,7 @@ export default function NovaInspecaoAPI653Page() {
           Nova Inspeção — API 653
         </h1>
         <p className="mt-1 text-sm text-carbono-600">
-          Insira os dados do tanque e as espessuras medidas por curso.
+          Insira os dados do tanque e as espessuras medidas por anel/virola.
         </p>
       </section>
 
@@ -274,7 +272,7 @@ export default function NovaInspecaoAPI653Page() {
             step={0.1}
           />
           <NumberField
-            label="N° de cursos"
+            label="N° de anéis/virolas"
             value={numCursos}
             onChange={(v) => setNum(Math.max(1, Math.round(v)))}
             min={1}
@@ -353,17 +351,17 @@ export default function NovaInspecaoAPI653Page() {
         </div>
       </Card>
 
-      {/* 4. Espessuras por curso */}
-      <Card title={`Cursos do Costado (${numCursos} curso${numCursos !== 1 ? "s" : ""})`}>
+      {/* 4. Espessuras por anel */}
+      <Card title={`Anéis do Costado (${numCursos} ${numCursos !== 1 ? "anéis" : "anel"})`}>
         <p className="mb-3 text-xs text-carbono-500">
-          Curso 1 = base (junto ao fundo). Preencha ao menos altura, t nominal e t
-          medida. Deixe em branco os cursos ainda não inspecionados.
+          Anel 1 = base (junto ao fundo). Preencha ao menos altura, t nominal e t
+          medida. Deixe em branco os anéis ainda não inspecionados.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-carbono-200 text-left text-xs text-carbono-500 uppercase">
-                <th className="pb-2 pr-4 font-semibold">Curso</th>
+                <th className="pb-2 pr-4 font-semibold">Anel</th>
                 <th className="pb-2 pr-4 font-semibold">Altura (m)</th>
                 <th className="pb-2 pr-4 font-semibold">t nominal (mm)</th>
                 <th className="pb-2 font-semibold">t medida (mm)</th>
@@ -419,8 +417,8 @@ export default function NovaInspecaoAPI653Page() {
           </table>
         </div>
         <p className="mt-2 text-xs text-carbono-400">
-          As taxas de corrosão por curso e os dados do fundo podem ser preenchidos
-          na tela de cálculo após criar a inspeção.
+          As taxas de corrosão por anel (t anterior + data) e os dados do fundo podem ser
+          preenchidos na tela de cálculo após criar a inspeção.
         </p>
       </Card>
 

@@ -9,7 +9,7 @@
  * para calcular RUL (vida útil restante) e datas de próxima inspeção.
  */
 
-import type { CursoMedido, FundoMedido, MetodologiaInspecao } from "@ntank/calc-core";
+import type { CursoMedido, FundoMedido, TetoMedido, MetodologiaInspecao } from "@ntank/calc-core";
 
 // ---------------------------------------------------------------------------
 // Sub-tipos
@@ -110,6 +110,9 @@ export interface ProjetoAPI653 {
 
   /** Dados do fundo do tanque (opcional — pode não ter sido inspecionado). */
   fundo?: FundoMedido;
+
+  /** Dados do teto do tanque (opcional — pode não ter sido inspecionado). */
+  teto?: TetoMedido;
 
   /** Nível de produto para o cálculo de MAST (m). Padrão = H_m. */
   H_liq_m: number;

@@ -48,6 +48,22 @@ export interface AlertaAPI653 {
 }
 
 // ---------------------------------------------------------------------------
+// Medição histórica (campanha de inspeção anterior)
+// ---------------------------------------------------------------------------
+
+/**
+ * Uma medição de espessura de uma campanha de inspeção anterior.
+ * Usada para calcular a taxa de corrosão real por regressão linear
+ * quando há 3 ou mais campanhas disponíveis.
+ */
+export interface MedicaoHistorica {
+  /** Espessura medida nessa campanha anterior [mm] */
+  t_mm: number;
+  /** Data dessa inspeção anterior (ISO 8601: "YYYY-MM-DD") */
+  data: string;
+}
+
+// ---------------------------------------------------------------------------
 // Dados de entrada por curso do costado
 // ---------------------------------------------------------------------------
 
@@ -68,10 +84,16 @@ export interface CursoMedido {
    * (conforme critério da API 653 §4.3).
    */
   t_medida_mm: number;
-  /** Espessura medida na inspeção anterior [mm] — opcional */
+  /** Espessura medida na inspeção anterior [mm] — mantido para compatibilidade */
   t_anterior_mm?: number | null;
-  /** Data da inspeção anterior — opcional (formato ISO 8601) */
+  /** Data da inspeção anterior — mantido para compatibilidade (formato ISO 8601) */
   data_anterior?: string | null;
+  /**
+   * Histórico de medições anteriores (campanhas passadas), da mais recente à mais antiga.
+   * Quando presente, é usado preferencialmente sobre t_anterior_mm / data_anterior.
+   * Com 3+ pontos, o cálculo de CR usa regressão linear (mais preciso).
+   */
+  historico?: MedicaoHistorica[];
   /** Sobrespessura de corrosão original de projeto [mm] — opcional */
   CA_mm?: number | null;
 }
@@ -102,6 +124,8 @@ export interface EntradaMASTCurso {
 
 export interface ResultadoMASTCurso {
   numero: number;
+  /** Altura de líquido acima do ponto 1-foot deste anel [m] */
+  H_liq_acima_m: number;
   t_min_mm: number;
   formula: string;
   referenciaNormativa: string;
@@ -122,12 +146,31 @@ export interface EntradaVerificacaoCurso {
 
 export interface ResultadoVerificacaoCurso {
   numero: number;
+  /** Altura do anel [m] */
+  altura_m: number;
+  /** Cota da base do anel em relação ao fundo [m] */
+  cota_base_m: number;
+  /** Altura de líquido acima do ponto 1-foot [m] (para MAST) */
+  H_liq_acima_m: number;
   t_nominal_mm: number;
   t_medida_mm: number;
+  /** Espessura da inspeção anterior [mm] — null se não informada */
+  t_anterior_mm: number | null;
+  /** Data da inspeção anterior — null se não informada */
+  data_anterior: string | null;
   t_min_mm: number;
   t_perda_mm: number;         // t_nominal − t_medida
   t_sobra_mm: number;         // t_medida − t_min
+  /** Taxa histórica calculada entre as duas inspeções [mm/ano] — null se sem histórico */
+  CR_historica_mm_ano: number | null;
+  /** Taxa assumida globalmente pelo operador [mm/ano] */
+  CR_assumida_mm_ano: number;
+  /** Taxa adotada no cálculo (maior entre histórica e assumida) [mm/ano] */
   CR_mm_ano: number;
+  /** Intervalo entre inspeções [anos] — null se sem histórico */
+  anos_entre_inspecoes: number | null;
+  /** Número de campanhas usadas para o cálculo de CR (incluindo a atual) */
+  n_medicoes: number;
   RUL_anos: number | null;    // null quando CR=0 ou t_medida < t_min
   status: StatusCurso;
   alertas: AlertaAPI653[];
@@ -210,10 +253,16 @@ export interface FundoMedido {
   t_anelar_mm?: number | null;
   /** Largura da chapa anelar [mm] — opcional */
   largura_anelar_mm?: number | null;
-  /** Espessura medida na inspeção anterior [mm] — opcional */
+  /** Espessura medida na inspeção anterior [mm] — mantido para compatibilidade */
   t_anterior_mm?: number | null;
-  /** Data da inspeção anterior — opcional */
+  /** Data da inspeção anterior — mantido para compatibilidade */
   data_anterior?: string | null;
+  /**
+   * Histórico de medições anteriores do fundo (campanhas passadas), da mais recente à mais antiga.
+   * Quando presente, é usado preferencialmente sobre t_anterior_mm / data_anterior.
+   * Com 3+ pontos, o cálculo de CR usa regressão linear (mais preciso).
+   */
+  historico?: MedicaoHistorica[];
   /** Taxa de corrosão assumida para o fundo [mm/ano] */
   CR_assumida_mm_ano: number;
 }
@@ -227,6 +276,51 @@ export interface ResultadoAvaliacaoFundo {
   RUL_anos: number | null;
   anelarAprovado: boolean | null;    // null quando não informado
   t_anelar_min_mm: number;           // mínimo normativo da anelar
+  status: StatusCurso;
+  alertas: AlertaAPI653[];
+}
+
+// ---------------------------------------------------------------------------
+// Entrada e resultado — Avaliação do teto
+// ---------------------------------------------------------------------------
+
+/**
+ * Dados de medição do teto do tanque.
+ * Suporta múltiplas campanhas históricas via campo `historico`.
+ */
+export interface TetoMedido {
+  /** Tipo de teto (informativo) */
+  tipo?: "conico" | "dome" | "externo" | "outro";
+  /** Espessura nominal de projeto do teto [mm] */
+  t_nominal_mm: number;
+  /** Espessura mínima medida no teto [mm] */
+  t_medida_mm: number;
+  /** Espessura da inspeção anterior [mm] — mantido para compatibilidade */
+  t_anterior_mm?: number | null;
+  /** Data da inspeção anterior — mantido para compatibilidade */
+  data_anterior?: string | null;
+  /**
+   * Histórico de medições anteriores (campanhas passadas), da mais recente à mais antiga.
+   * Com 3+ pontos, o CR é calculado por regressão linear.
+   */
+  historico?: MedicaoHistorica[];
+  /** Taxa de corrosão assumida para o teto [mm/ano] */
+  CR_assumida_mm_ano: number;
+}
+
+export interface ResultadoAvaliacaoTeto {
+  t_nominal_mm: number;
+  t_medida_mm: number;
+  /** Espessura mínima normativa (API 650 §5.10.5.2 via API 653 §4.5.1) */
+  t_min_mm: number;
+  t_sobra_mm: number;
+  CR_mm_ano: number;
+  CR_historica_mm_ano: number | null;
+  CR_assumida_mm_ano: number;
+  anos_entre_inspecoes: number | null;
+  /** Número de campanhas usadas para o cálculo de CR (incluindo a atual) */
+  n_medicoes: number;
+  RUL_anos: number | null;
   status: StatusCurso;
   alertas: AlertaAPI653[];
 }
@@ -264,5 +358,7 @@ export interface ResultadoTaxaCorrosao {
   CR_adotada_mm_ano: number;
   /** Número de anos entre inspeções (quando histórico disponível) */
   anos_entre_inspecoes: number | null;
+  /** Número de campanhas usadas para o cálculo de CR (incluindo a atual) */
+  n_medicoes: number;
   alertas: AlertaAPI653[];
 }

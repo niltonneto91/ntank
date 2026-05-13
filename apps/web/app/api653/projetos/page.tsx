@@ -103,7 +103,7 @@ function ProjetoCard({
           </dd>
         </div>
         <div>
-          <dt className="text-carbono-500">Cursos</dt>
+          <dt className="text-carbono-500">Anéis</dt>
           <dd className="font-semibold tabular">{p.cursos.length || "—"}</dd>
         </div>
         <div>
