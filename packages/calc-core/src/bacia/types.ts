@@ -34,6 +34,12 @@ export interface TanqueBacia {
   H_m: number;
   /** Volume operacional nominal [m³] — informado ou calculado como π/4 × D² × H */
   volume_m3: number;
+  /**
+   * Altura do anel de fundação (base de concreto/areia) acima do piso da bacia [m].
+   * Valores típicos: 0,15 a 0,60 m. Default: 0.
+   * Documentado na memória de cálculo; não altera o cálculo de volume §5.9.2.2.1.
+   */
+  alturaAnel_m?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -46,6 +52,24 @@ export interface AlertaBacia {
   code: string;
   nivel: NivelAlertaBacia;
   mensagem: string;
+}
+
+// ---------------------------------------------------------------------------
+// Layout geométrico de tanques
+// ---------------------------------------------------------------------------
+
+/** Posição calculada de um tanque no plano da bacia (em metros, origem = canto interno sup-esq). */
+export interface PosicaoTanqueBacia {
+  /** ID do tanque */
+  id: string;
+  /** Coordenada X do centro do tanque [m] a partir do canto esq interno da bacia */
+  cx_m: number;
+  /** Coordenada Y do centro do tanque [m] a partir do canto sup interno da bacia */
+  cy_m: number;
+  /** Raio externo do tanque [m] (= D_m / 2) */
+  r_m: number;
+  /** Fileira: 0 = superior, 1 = inferior */
+  fileira: 0 | 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +144,8 @@ export interface ResultadoVerificarBacia {
   alturaExcedeMuro: boolean;
   /** Distanciamentos mínimos calculados */
   distanciamentos: DistanciamentoTanque[];
+  /** Posições geométricas dos tanques no plano da bacia (para SVG) */
+  posicoesTanques: PosicaoTanqueBacia[];
   alertas: AlertaBacia[];
 }
 
@@ -178,5 +204,7 @@ export interface ResultadoDimensionarBacia {
    */
   alturaExcedeLimite: boolean;
   distanciamentos: DistanciamentoTanque[];
+  /** Posições geométricas dos tanques no plano da bacia (para SVG) */
+  posicoesTanques: PosicaoTanqueBacia[];
   alertas: AlertaBacia[];
 }

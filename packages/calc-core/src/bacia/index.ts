@@ -5,7 +5,7 @@
  */
 
 // Cálculos
-export { verificarBacia, dimensionarBacia } from "./dimensionamento.js";
+export { verificarBacia, dimensionarBacia, calcularPosicoesTanques } from "./dimensionamento.js";
 export {
   calcularVolumeRequerido,
   calcularVolumeDisponivel,
@@ -29,6 +29,7 @@ export type {
   NivelAlertaBacia,
   AlertaBacia,
   DistanciamentoTanque,
+  PosicaoTanqueBacia,
   EntradaVerificarBacia,
   ResultadoVerificarBacia,
   EntradaDimensionarBacia,

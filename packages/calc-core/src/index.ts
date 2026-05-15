@@ -302,6 +302,7 @@ export type {
   NivelAlertaBacia,
   AlertaBacia,
   DistanciamentoTanque,
+  PosicaoTanqueBacia,
   EntradaVerificarBacia,
   ResultadoVerificarBacia,
   EntradaDimensionarBacia,
