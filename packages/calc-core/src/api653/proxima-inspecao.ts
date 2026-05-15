@@ -44,8 +44,8 @@ export function calcularProximaInspecao(
 ): ResultadoProximaInspecao {
   const alertas: AlertaAPI653[] = [];
 
-  // RUL crítico = menor entre costado e fundo (excluindo nulls)
-  const vals = [RUL_costado_anos, RUL_fundo_anos].filter((v): v is number => v !== null && v > 0);
+  // RUL crítico = menor entre costado e fundo (excluindo nulls; inclui 0 = componente REPROVADO)
+  const vals = [RUL_costado_anos, RUL_fundo_anos].filter((v): v is number => v !== null && v >= 0);
   const RUL_critico = vals.length > 0 ? Math.min(...vals) : null;
 
   let intervaloInterno: number | null = null;
