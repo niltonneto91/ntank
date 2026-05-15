@@ -50,9 +50,9 @@ const MODULOS: ModuloCard[] = [
     norma: "NBR 17505",
     titulo: "Cálculo de Bacia de Contenção",
     descricao:
-      "Dimensionamento do volume e das dimensões da bacia de contenção para múltiplos tanques, conforme requisitos normativos.",
-    href: "#",
-    ativo: false,
+      "Verificação e dimensionamento de bacias de contenção para múltiplos tanques. Volume, distanciamentos e layout interativo conforme NBR 17505-2 §5.9.2.",
+    href: "/bacia/projetos",
+    ativo: true,
     icone: "🏗️",
   },
 ];

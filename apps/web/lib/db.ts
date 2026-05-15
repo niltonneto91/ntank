@@ -8,6 +8,7 @@
  *   "calc-api2000"  → ProjetoAPI2000 (ventilação — API 2000)
  *   "calc-api2350"  → ProjetoAPI2350 (prevenção de transbordamento — API 2350)
  *   "calc-api653"   → ProjetoAPI653 (inspeção e vida útil — API 653)
+ *   "calc-bacia"    → ProjetoBacia (bacia de contenção — NBR 17505)
  *
  * Histórico de versões:
  *   v1 — store "projetos" com índice "by-atualizado"
@@ -15,6 +16,7 @@
  *   v3 — adiciona store "calc-api2000" (Fase API 2000)
  *   v4 — adiciona store "calc-api2350" (Fase API 2350)
  *   v5 — adiciona store "calc-api653"  (Fase API 653)
+ *   v6 — adiciona store "calc-bacia"   (Fase NBR 17505 Bacia de Contenção)
  */
 
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
@@ -22,6 +24,7 @@ import { migrarProjeto, type ProjetoNTANK } from "./projeto";
 import type { ProjetoAPI2000 } from "./api2000-projeto";
 import type { ProjetoAPI2350 } from "./api2350-projeto";
 import type { ProjetoAPI653 } from "./api653-projeto";
+import type { ProjetoBacia } from "./bacia-projeto";
 
 interface NtankDB extends DBSchema {
   projetos: {
@@ -53,10 +56,17 @@ interface NtankDB extends DBSchema {
       "by-atualizado": string;
     };
   };
+  "calc-bacia": {
+    key: string;
+    value: ProjetoBacia;
+    indexes: {
+      "by-atualizado": string;
+    };
+  };
 }
 
 const DB_NAME = "ntank-db";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 let dbPromise: Promise<IDBPDatabase<NtankDB>> | null = null;
 
@@ -104,6 +114,14 @@ function getDB(): Promise<IDBPDatabase<NtankDB>> {
         if (oldVersion < 5) {
           if (!db.objectStoreNames.contains("calc-api653")) {
             const s = db.createObjectStore("calc-api653", { keyPath: "id" });
+            s.createIndex("by-atualizado", "atualizadoEm");
+          }
+        }
+
+        // v5 → v6: nova store "calc-bacia" para projetos Bacia de Contenção
+        if (oldVersion < 6) {
+          if (!db.objectStoreNames.contains("calc-bacia")) {
+            const s = db.createObjectStore("calc-bacia", { keyPath: "id" });
             s.createIndex("by-atualizado", "atualizadoEm");
           }
         }
@@ -226,4 +244,32 @@ export async function salvarProjetoAPI653(projeto: ProjetoAPI653): Promise<void>
 export async function excluirProjetoAPI653(id: string): Promise<void> {
   const db = await getDB();
   await db.delete("calc-api653", id);
+}
+
+// ---------------------------------------------------------------------------
+// NBR 17505 / ProjetoBacia
+// ---------------------------------------------------------------------------
+
+export async function listarProjetosBacia(): Promise<ProjetoBacia[]> {
+  const db = await getDB();
+  const all = await db.getAllFromIndex("calc-bacia", "by-atualizado");
+  return all.reverse(); // mais recentes primeiro
+}
+
+export async function obterProjetoBacia(id: string): Promise<ProjetoBacia | undefined> {
+  const db = await getDB();
+  return db.get("calc-bacia", id);
+}
+
+export async function salvarProjetoBacia(projeto: ProjetoBacia): Promise<void> {
+  const db = await getDB();
+  await db.put("calc-bacia", {
+    ...projeto,
+    atualizadoEm: new Date().toISOString(),
+  });
+}
+
+export async function excluirProjetoBacia(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete("calc-bacia", id);
 }

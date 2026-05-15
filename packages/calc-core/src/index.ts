@@ -279,6 +279,35 @@ export type {
   ResultadoTaxaCorrosao,
 } from "./api653/index.js";
 
+// === NBR 17505 — Bacia de Contenção ===
+export {
+  verificarBacia,
+  dimensionarBacia,
+  calcularVolumeRequerido,
+  calcularVolumeDisponivel,
+  calcularAreaBasesTanques,
+  calcularAlturaDiqueMinimo,
+  calcularVolumeTanque,
+  areaBaseTanque,
+  FREEBOARD_MINIMO_M,
+  ALTURA_MAX_DIQUE_M,
+  distMinTanqueMuro,
+  distMinEntreATanques,
+  calcularDistanciamentos,
+} from "./bacia/index.js";
+
+export type {
+  TanqueBacia,
+  OrientacaoTanque,
+  NivelAlertaBacia,
+  AlertaBacia,
+  DistanciamentoTanque,
+  EntradaVerificarBacia,
+  ResultadoVerificarBacia,
+  EntradaDimensionarBacia,
+  ResultadoDimensionarBacia,
+} from "./bacia/index.js";
+
 // === Fase 5 — Escadas, plataformas e guarda-corpos ===
 export {
   calcularAcessorios,
