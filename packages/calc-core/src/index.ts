@@ -252,6 +252,7 @@ export {
   T_MIN_ANELAR_MM,
   avaliarTeto,
   T_MIN_TETO_MM,
+  T_MIN_TETO_INSPECAO_MM,
   calcularProximaInspecao,
 } from "./api653/index.js";
 

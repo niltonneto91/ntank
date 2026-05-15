@@ -1,15 +1,18 @@
 /**
  * Avaliação do teto do tanque — API 653 §4.5.1.
  *
- * A API 653 §4.5.1 refere-se à API 650 para os critérios mínimos do teto.
- * A API 650 §5.10.5.2 estabelece a espessura mínima de 3/16" (4,76 mm) para
- * chapas de teto cônico e dome autoportante.
+ * API 653 §4.5.1: "Roof plates that have been found to have thicknesses below
+ * the minimum required by the original design code shall be repaired or replaced
+ * unless an engineering evaluation indicates that the remaining thickness is
+ * structurally adequate."
  *
- * O cálculo de vida útil segue o mesmo princípio do costado:
- *   RUL = (t_medida − t_min) / CR   [anos]
+ * Portanto, para tanques EXISTENTES, NÃO existe espessura mínima fixa de
+ * aposentadoria — o critério é definido pelo engenheiro responsável com base
+ * em avaliação estrutural. O campo `teto.t_min_aceitavel_mm` permite que o
+ * engenheiro especifique esse limite; o padrão adotado é 2,5 mm (mínimo
+ * estrutural absoluto para chapa de aço carbono).
  *
- * Suporta múltiplas campanhas históricas via campo `historico` do TetoMedido,
- * usando regressão linear quando há 3+ pontos (mais preciso).
+ * Referência para PROJETO de tanque NOVO: API 650 §5.10.5.2 — 3/16" (4,76 mm).
  *
  * NÃO reproduz texto integral da norma.
  */
@@ -19,10 +22,17 @@ import { calcularTaxaCorrosao } from "./corrosao.js";
 import type { TetoMedido, ResultadoAvaliacaoTeto, AlertaAPI653 } from "./types.js";
 
 /**
- * Espessura mínima normativa do teto: 3/16" = 4,76 mm.
- * Referência: API 650 §5.10.5.2 (aplicado via API 653 §4.5.1).
+ * Espessura mínima de PROJETO para teto de tanque NOVO (API 650 §5.10.5.2).
+ * Não usar diretamente como critério de aposentadoria em inspeção API 653 —
+ * para isso, usar `teto.t_min_aceitavel_mm` definido pelo engenheiro.
  */
-export const T_MIN_TETO_MM = 4.76; // 3/16"
+export const T_MIN_TETO_MM = 4.76; // 3/16" — somente para referência de tanque novo
+
+/**
+ * Espessura mínima absoluta adotada como padrão para inspeção de tanques existentes [mm].
+ * Valor conservador — o engenheiro pode especificar outro via `teto.t_min_aceitavel_mm`.
+ */
+export const T_MIN_TETO_INSPECAO_MM = 2.5;
 
 /**
  * Avalia a vida útil do teto do tanque.
@@ -35,7 +45,11 @@ export function avaliarTeto(
   dataInspecao: string,
 ): ResultadoAvaliacaoTeto {
   const alertas: AlertaAPI653[] = [];
-  const t_min_mm = T_MIN_TETO_MM;
+
+  // Espessura mínima aceitável para inspeção:
+  // - Usa o valor definido pelo engenheiro (t_min_aceitavel_mm) se informado
+  // - Caso contrário, usa o padrão conservador de 2,5 mm para tanques existentes
+  const t_min_mm = teto.t_min_aceitavel_mm ?? T_MIN_TETO_INSPECAO_MM;
 
   // Histórico efetivo: preferir campo 'historico'; fallback para par clássico
   const historicoEfetivo =
@@ -64,13 +78,16 @@ export function avaliarTeto(
   if (teto.t_medida_mm < t_min_mm) {
     status = "REPROVADO";
     RUL_anos = 0;
+    const origemMin = teto.t_min_aceitavel_mm != null
+      ? "definido pelo engenheiro (API 653 §4.5.1)"
+      : "padrão conservador para inspeção (API 653 §4.5.1)";
     alertas.push({
       code: "T001",
       nivel: "CRITICO",
       mensagem:
         `Espessura do teto medida (${teto.t_medida_mm} mm) está ABAIXO do mínimo ` +
-        `normativo de ${t_min_mm} mm (3/16" — API 650 §5.10.5.2). ` +
-        "Reparo ou substituição obrigatório antes do retorno ao serviço.",
+        `aceitável de ${t_min_mm} mm — ${origemMin}. ` +
+        "Avaliação estrutural e reparo/substituição obrigatórios antes do retorno ao serviço.",
     });
   } else if (CR > 0) {
     RUL_anos = round2(t_sobra_mm / CR);

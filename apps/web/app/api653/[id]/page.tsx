@@ -11,11 +11,13 @@ import {
   T_MIN_FUNDO_MM,
   T_MIN_ANELAR_MM,
   T_MIN_TETO_MM,
+  T_MIN_TETO_INSPECAO_MM,
   type CursoMedido,
   type FundoMedido,
   type TetoMedido,
   type MedicaoHistorica,
   type ResultadoVerificacaoCurso,
+  type ResultadoAvaliacaoFundo,
 } from "@ntank/calc-core";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
@@ -876,6 +878,151 @@ function SecaoMAOLL({ p }: { p: ProjetoAPI653 }) {
 
 // ---------------------------------------------------------------------------
 // Fundo
+// Memorial de cálculo expansível para o fundo
+// ---------------------------------------------------------------------------
+
+function MemorialFundo({ f, resultado }: {
+  f: FundoMedido;
+  resultado: ResultadoAvaliacaoFundo;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const temHistorico = resultado.CR_historica_mm_ano != null && resultado.anos_entre_inspecoes != null;
+  // Espessura da medição anterior mais recente (para exibir na fórmula 2-campanhas)
+  const tAnterior = f.historico?.[0]?.t_mm ?? f.t_anterior_mm ?? null;
+
+  return (
+    <div className="border-t border-carbono-100 pt-2">
+      <button
+        onClick={() => setAberto((a) => !a)}
+        className="flex items-center gap-1 text-xs text-carbono-500 hover:text-carbono-700 transition-colors"
+      >
+        <span className="font-mono">{aberto ? "▼" : "▶"}</span>
+        Memorial de cálculo — Fundo
+        {resultado.n_medicoes > 1 && (
+          <span className="ml-1 rounded bg-carbono-100 px-1.5 py-0.5 text-carbono-500">
+            {resultado.n_medicoes} campanhas
+          </span>
+        )}
+      </button>
+
+      {aberto && (
+        <div className="mt-3 space-y-4 rounded-md bg-creme p-4 text-xs font-mono text-carbono-700">
+          {/* --- Espessura mínima --- */}
+          <div>
+            <p className="mb-1 font-bold font-sans text-carbono-800 not-italic">
+              1. Espessura mínima aceitável — Fundo (API 653 §4.4.5)
+            </p>
+            <p className="leading-relaxed">
+              t_mín = {resultado.t_min_aceitavel_mm.toFixed(1)} mm (limite normativo para fundo de tanque existente)
+            </p>
+            <p className={`mt-1 font-semibold ${resultado.t_medida_mm >= resultado.t_min_aceitavel_mm ? "text-green-700" : "text-red-700"}`}>
+              t_medida ({fmtMm(resultado.t_medida_mm)}) {resultado.t_medida_mm >= resultado.t_min_aceitavel_mm ? "≥" : "<"} t_mín ({fmtMm(resultado.t_min_aceitavel_mm)})
+              → {resultado.t_medida_mm >= resultado.t_min_aceitavel_mm ? "APROVADO" : "REPROVADO"}
+            </p>
+          </div>
+
+          {/* --- Taxa de corrosão --- */}
+          <div>
+            <p className="mb-1 font-bold font-sans text-carbono-800 not-italic">
+              2. Taxa de corrosão (CR){resultado.n_medicoes > 2 ? ` — regressão linear (${resultado.n_medicoes} campanhas)` : ""}
+            </p>
+            {temHistorico ? (
+              <>
+                {resultado.n_medicoes > 2 ? (
+                  <p className="leading-relaxed text-carbono-500">
+                    CR calculada por regressão linear dos mínimos quadrados sobre {resultado.n_medicoes} campanhas
+                    (span total: {resultado.anos_entre_inspecoes?.toFixed(2)} anos).
+                  </p>
+                ) : (
+                  <>
+                    <p className="leading-relaxed">CR_histórica = (t_anterior − t_medida) / Δt</p>
+                    <p className="leading-relaxed text-carbono-500">
+                      &nbsp;&nbsp;t_anterior = {fmtMm(tAnterior)}
+                    </p>
+                    <p className="leading-relaxed text-carbono-500">
+                      &nbsp;&nbsp;t_medida = {fmtMm(resultado.t_medida_mm)}
+                    </p>
+                    <p className="leading-relaxed text-carbono-500">
+                      &nbsp;&nbsp;Δt = {resultado.anos_entre_inspecoes?.toFixed(2)} anos
+                    </p>
+                    <p className="mt-1 leading-relaxed font-semibold">
+                      CR_histórica = ({fmtMm(tAnterior)} − {fmtMm(resultado.t_medida_mm)}) / {resultado.anos_entre_inspecoes?.toFixed(2)} anos
+                      {" = "}{(resultado.CR_historica_mm_ano ?? 0).toFixed(3)} mm/ano
+                    </p>
+                  </>
+                )}
+                <p className="mt-1 leading-relaxed">
+                  CR_histórica = {(resultado.CR_historica_mm_ano ?? 0).toFixed(3)} mm/ano
+                </p>
+                <p className="leading-relaxed">
+                  CR_assumida = {resultado.CR_assumida_mm_ano.toFixed(3)} mm/ano
+                </p>
+                <p className="font-semibold text-carbono-800">
+                  CR_adotada = max(CR_histórica, CR_assumida) = {resultado.CR_mm_ano.toFixed(3)} mm/ano
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="leading-relaxed text-carbono-500">
+                  Sem histórico de inspeção anterior. Taxa assumida pelo operador.
+                </p>
+                <p className="font-semibold">CR_adotada = {resultado.CR_assumida_mm_ano.toFixed(3)} mm/ano</p>
+              </>
+            )}
+          </div>
+
+          {/* --- RUL --- */}
+          <div>
+            <p className="mb-1 font-bold font-sans text-carbono-800 not-italic">
+              3. Vida útil restante — RUL (Remaining Useful Life)
+            </p>
+            {resultado.t_medida_mm < resultado.t_min_aceitavel_mm ? (
+              <p className="font-semibold text-red-700">
+                t_medida &lt; t_mín → fundo REPROVADO — RUL = 0
+              </p>
+            ) : resultado.CR_mm_ano <= 0 ? (
+              <p className="font-semibold text-green-700">
+                CR = 0 → Vida útil indeterminada (sem taxa de corrosão)
+              </p>
+            ) : (
+              <>
+                <p className="leading-relaxed">RUL = (t_medida − t_mín) / CR</p>
+                <p className="leading-relaxed text-carbono-500">
+                  &nbsp;&nbsp;t_sobra = {fmtMm(resultado.t_medida_mm)} − {fmtMm(resultado.t_min_aceitavel_mm)} = {fmtMm(resultado.t_sobra_mm)}
+                </p>
+                <p className="mt-1 font-semibold text-carbono-800">
+                  RUL = {fmtMm(resultado.t_sobra_mm)} / {resultado.CR_mm_ano.toFixed(3)} mm/ano
+                  {" = "}<span className="text-verde-700">{resultado.RUL_anos != null ? resultado.RUL_anos.toFixed(2) : "∞"} anos</span>
+                </p>
+              </>
+            )}
+            <p className={`mt-1 font-semibold font-sans ${
+              resultado.status === "APROVADO" ? "text-green-700" :
+              resultado.status === "CRITICO"  ? "text-yellow-700" : "text-red-700"
+            }`}>
+              Status: {resultado.status}
+            </p>
+          </div>
+
+          {resultado.alertas.length > 0 && (
+            <div className="space-y-1 font-sans">
+              {resultado.alertas.map((a, i) => (
+                <div key={i} className={`rounded border px-2 py-1 text-xs ${
+                  a.nivel === "CRITICO" ? "border-red-200 bg-red-50 text-red-800" :
+                  a.nivel === "ALERTA"  ? "border-yellow-200 bg-yellow-50 text-yellow-800" :
+                  "border-blue-200 bg-blue-50 text-blue-800"
+                }`}>
+                  <span className="font-bold">[{a.code}]</span> {a.mensagem}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 
 function SecaoFundo({ p, atualizar }: { p: ProjetoAPI653; atualizar: (upd: Partial<ProjetoAPI653>) => void }) {
@@ -960,6 +1107,9 @@ function SecaoFundo({ p, atualizar }: { p: ProjetoAPI653; atualizar: (upd: Parti
           )}
         </div>
       )}
+      {resultado && fundo && (
+        <MemorialFundo f={fundo} resultado={resultado} />
+      )}
       {resultado?.alertas.map((a, i) => (
         <div key={i} className={`rounded-md border px-3 py-2 text-xs ${
           a.nivel === "CRITICO" ? "border-red-200 bg-red-50 text-red-800" :
@@ -1022,10 +1172,23 @@ function SecaoTeto({ p, atualizar }: { p: ProjetoAPI653; atualizar: (upd: Partia
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <NumberField label="t nominal (mm)" value={teto.t_nominal_mm} onChange={(v) => setTetoCampo("t_nominal_mm", v)} min={0} step={0.1} />
         <NumberField label="t medida (mm)" value={teto.t_medida_mm} onChange={(v) => setTetoCampo("t_medida_mm", v)} min={0} step={0.1} />
         <NumberField label="CR assumida (mm/ano)" value={teto.CR_assumida_mm_ano} onChange={(v) => setTetoCampo("CR_assumida_mm_ano", v)} min={0} step={0.01} />
+        <div>
+          <NumberField
+            label="t mín. aceitável (mm) — opc."
+            value={teto.t_min_aceitavel_mm ?? ""}
+            onChange={(v) => setTetoCampo("t_min_aceitavel_mm", v || null)}
+            min={0}
+            step={0.1}
+          />
+          <p className="mt-1 text-[10px] text-carbono-400 leading-tight">
+            Tanque existente (API 653 §4.5.1): definir conforme avaliação estrutural.
+            Padrão: {T_MIN_TETO_INSPECAO_MM} mm. Ref. tanque novo (API 650): {T_MIN_TETO_MM} mm.
+          </p>
+        </div>
       </div>
       <HistoricoMedicoes
         titulo="Teto"
@@ -1037,7 +1200,13 @@ function SecaoTeto({ p, atualizar }: { p: ProjetoAPI653; atualizar: (upd: Partia
 
       {resultado && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 rounded-md bg-creme p-4">
-          <div><p className="text-xs text-carbono-500">t mín. (3/16")</p><p className="font-bold tabular">{T_MIN_TETO_MM} mm</p></div>
+          <div>
+            <p className="text-xs text-carbono-500">t mín. aceitável</p>
+            <p className="font-bold tabular">{resultado.t_min_mm} mm</p>
+            <p className="text-[10px] text-carbono-400">
+              {teto.t_min_aceitavel_mm != null ? "definido pelo engenheiro" : `padrão API 653`}
+            </p>
+          </div>
           <div><p className="text-xs text-carbono-500">CR adotada</p><p className="font-bold tabular">{resultado.CR_mm_ano.toFixed(3)} mm/ano</p></div>
           <div><p className="text-xs text-carbono-500">RUL teto</p><p className="font-bold tabular">{fmtAnos(resultado.RUL_anos)}</p></div>
           <div>

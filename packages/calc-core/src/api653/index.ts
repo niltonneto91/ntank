@@ -10,7 +10,7 @@ export { calcularTaxaCorrosao, calcularTaxasCursos, calcularCRMultiHistorico } f
 export { avaliarCostado } from "./vida-util.js";
 export { calcularMAOLL } from "./maoll.js";
 export { avaliarFundo, T_MIN_FUNDO_MM, T_MIN_ANELAR_MM } from "./fundo.js";
-export { avaliarTeto, T_MIN_TETO_MM } from "./teto.js";
+export { avaliarTeto, T_MIN_TETO_MM, T_MIN_TETO_INSPECAO_MM } from "./teto.js";
 export { calcularProximaInspecao } from "./proxima-inspecao.js";
 
 // Conversões

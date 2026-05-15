@@ -273,6 +273,14 @@ export interface ResultadoAvaliacaoFundo {
   t_min_aceitavel_mm: number;  // 2,5 mm conforme API 653 §4.4
   t_sobra_mm: number;
   CR_mm_ano: number;
+  /** Taxa calculada a partir do histórico [mm/ano] — null quando não há histórico */
+  CR_historica_mm_ano: number | null;
+  /** Taxa assumida pelo operador [mm/ano] */
+  CR_assumida_mm_ano: number;
+  /** Número de anos entre inspeções (quando histórico disponível) */
+  anos_entre_inspecoes: number | null;
+  /** Número de campanhas usadas para o cálculo de CR (incluindo a atual) */
+  n_medicoes: number;
   RUL_anos: number | null;
   anelarAprovado: boolean | null;    // null quando não informado
   t_anelar_min_mm: number;           // mínimo normativo da anelar
@@ -306,12 +314,26 @@ export interface TetoMedido {
   historico?: MedicaoHistorica[];
   /** Taxa de corrosão assumida para o teto [mm/ano] */
   CR_assumida_mm_ano: number;
+  /**
+   * Espessura mínima aceitável para o teto em inspeção de tanque existente [mm].
+   *
+   * Para tanques existentes (API 653 §4.5.1), não há valor fixo — o engenheiro
+   * deve avaliar a adequação estrutural e definir o limite de retirada de serviço.
+   * Se omitido, o cálculo usa 2,5 mm (mínimo estrutural absoluto).
+   *
+   * Nota: 4,76 mm (3/16") é o mínimo de PROJETO para tanques NOVOS (API 650 §5.10.5.2)
+   * e NÃO deve ser aplicado diretamente como critério de aposentadoria em inspeções.
+   */
+  t_min_aceitavel_mm?: number;
 }
 
 export interface ResultadoAvaliacaoTeto {
   t_nominal_mm: number;
   t_medida_mm: number;
-  /** Espessura mínima normativa (API 650 §5.10.5.2 via API 653 §4.5.1) */
+  /**
+   * Espessura mínima aceitável adotada no cálculo [mm].
+   * Para tanques novos (API 650): 4,76 mm. Para inspeção (API 653): definida pelo engenheiro.
+   */
   t_min_mm: number;
   t_sobra_mm: number;
   CR_mm_ano: number;
