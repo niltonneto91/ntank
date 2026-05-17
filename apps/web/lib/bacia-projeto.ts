@@ -109,6 +109,18 @@ export interface ProjetoBacia {
   // Dimensões existentes (modo verificar)
   baciaDims?: DimensoesBaciaExistente;
 
+  /**
+   * Formato da planta da bacia no modo **Dimensionar**.
+   * - `"retangular"` (default): L/W calculados automaticamente a partir dos tanques.
+   * - `"livre"`: área disponível informada diretamente — para plantas irregulares.
+   */
+  formatoBaciaDim?: "retangular" | "livre";
+  /**
+   * Área interna disponível [m²] para o modo Dimensionar com forma irregular.
+   * Usado somente quando `formatoBaciaDim === "livre"`.
+   */
+  area_m2_dim?: number;
+
   observacoes?: string;
 }
 

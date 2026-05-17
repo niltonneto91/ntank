@@ -358,6 +358,61 @@ export function dimensionarBacia(
   const volumeRequerido = round2(calcularVolumeRequerido(entrada.tanques));
   const V_desl = entrada.V_deslocamentos_outros_m3 ?? 0;
 
+  // -----------------------------------------------------------------------
+  // Modo área livre — área interna fornecida diretamente pelo usuário.
+  // A área é uma restrição do terreno (não há expansão automática).
+  // -----------------------------------------------------------------------
+  if (entrada.area_m2 != null && entrada.area_m2 > 0) {
+    const area = entrada.area_m2;
+    // Derivar L/W equivalentes (produto = area) para as funções de cálculo
+    const L_ef = Math.sqrt(area * 1.5);
+    const W_ef = area / L_ef;
+
+    const h_parede = round2(
+      calcularAlturaDiqueMinimo(volumeRequerido, L_ef, W_ef, entrada.tanques, fb, V_desl),
+    );
+    const h_efetiva_req = round2(Math.max(h_parede - fb, 0));
+    const alturaExcedeLimite = h_parede > alturaMaxMuro;
+
+    if (alturaExcedeLimite) {
+      alertas.push({
+        code: "B008",
+        nivel: "CRITICO",
+        mensagem:
+          `Altura necessária (${h_parede.toFixed(2)} m) excede o limite de ` +
+          `${alturaMaxMuro.toFixed(1)} m (NBR 17505-2 §5.9.2.2). ` +
+          "Aumente a área disponível ou reduza o volume dos tanques.",
+      });
+    }
+
+    const deslFinal = calcularDeslocamentos(entrada.tanques, h_efetiva_req);
+    const deslocamentos: DetalhamentoDeslocamentos = {
+      V_desl_bases_m3: round2(deslFinal.V_desl_bases_m3),
+      V_desl_corpos_m3: round2(deslFinal.V_desl_corpos_m3),
+      V_desl_outros_m3: round2(V_desl),
+      V_desl_total_m3: round2(deslFinal.V_desl_total_m3 + V_desl),
+    };
+
+    const distanciamentos = calcularDistanciamentos(entrada.tanques);
+
+    return {
+      volumeRequerido_m3: volumeRequerido,
+      alturaEfetiva_m: h_efetiva_req,
+      alturaParede_m: h_parede,
+      freeboard_m: fb,
+      areaLiquidaMinima_m2: round2(area),
+      areaTotalSugerida_m2: round2(area),
+      comprimentoSugerido_m: 0,
+      larguraSugerida_m: 0,
+      alturaExcedeLimite,
+      areaInterna_m2: round2(area),
+      deslocamentos,
+      distanciamentos,
+      posicoesTanques: [],
+      alertas,
+    };
+  }
+
   // Altura efetiva máxima disponível
   const alturaEfetiva = round2(alturaMaxMuro - fb);
 
@@ -477,6 +532,7 @@ export function dimensionarBacia(
     comprimentoSugerido_m: round1(L),
     larguraSugerida_m: round1(W),
     alturaExcedeLimite,
+    areaInterna_m2: areaTotalSugerida,
     deslocamentos,
     distanciamentos,
     posicoesTanques,

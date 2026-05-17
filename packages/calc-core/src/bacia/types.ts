@@ -223,6 +223,7 @@ export interface EntradaDimensionarBacia {
   /**
    * Relação L/W desejada para a planta da bacia (default: 1,5).
    * Valores entre 1,0 e 3,0 são razoáveis.
+   * Ignorado quando `area_m2` for informado.
    */
   relacaoLC?: number;
   /**
@@ -230,6 +231,14 @@ export interface EntradaDimensionarBacia {
    * Default: 0.
    */
   V_deslocamentos_outros_m3?: number;
+  /**
+   * Área interna disponível [m²] — para bacias de formato irregular (L, T, arredondadas).
+   * Quando informado, o cálculo geométrico de L/W a partir dos tanques é ignorado;
+   * a altura mínima do dique é calculada diretamente a partir desta área.
+   * Se a altura necessária exceder `alturaMaxMuro_m`, um alerta CRÍTICO é emitido
+   * (não há expansão automática de área — a área é uma restrição do terreno).
+   */
+  area_m2?: number;
 }
 
 /** Resultado do dimensionamento de nova bacia. */
@@ -261,4 +270,10 @@ export interface ResultadoDimensionarBacia {
   /** Posições geométricas dos tanques no plano da bacia (para SVG) */
   posicoesTanques: PosicaoTanqueBacia[];
   alertas: AlertaBacia[];
+  /**
+   * Área interna efetiva utilizada no cálculo [m²].
+   * Preenchido quando `entrada.area_m2` foi informado (forma irregular);
+   * igual a `areaTotalSugerida_m2` quando calculado geometricamente.
+   */
+  areaInterna_m2?: number;
 }

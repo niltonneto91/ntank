@@ -448,6 +448,10 @@ function PaginaMemorialDimensionar({
   const totalVMuretas = totalVolumeMuretas(muretas);
   const statusTxt = resultado.alturaExcedeLimite ? "ATENÇÃO" : "OK";
   const statusStyle = resultado.alturaExcedeLimite ? s.statusWar : s.statusOk;
+  const areaLivre = projeto.formatoBaciaDim === "livre";
+  const areaInterna = resultado.areaInterna_m2 ?? projeto.area_m2_dim ?? 0;
+  const Lef = areaInterna > 0 ? Math.sqrt(areaInterna * 1.5) : 0;
+  const Wef = Lef > 0 ? areaInterna / Lef : 0;
 
   return (
     <Page size="A4" style={s.page}>
@@ -460,7 +464,10 @@ function PaginaMemorialDimensionar({
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <Text style={statusStyle}>{statusTxt}</Text>
         <Text style={{ fontSize: 8.5, color: CARBONO_700 }}>
-          L × W = {f1(resultado.comprimentoSugerido_m)} × {f1(resultado.larguraSugerida_m)} m | h_parede = {f2(resultado.alturaParede_m)} m | V_req = {f1(resultado.volumeRequerido_m3)} m³
+          {areaLivre
+            ? `A_interna = ${f2(areaInterna)} m² (irregular) | h_parede = ${f2(resultado.alturaParede_m)} m | V_req = ${f1(resultado.volumeRequerido_m3)} m³`
+            : `L × W = ${f1(resultado.comprimentoSugerido_m)} × ${f1(resultado.larguraSugerida_m)} m | h_parede = ${f2(resultado.alturaParede_m)} m | V_req = ${f1(resultado.volumeRequerido_m3)} m³`
+          }
         </Text>
       </View>
 
@@ -473,7 +480,7 @@ function PaginaMemorialDimensionar({
 
       {/* Memória de cálculo */}
       <View style={s.memoBox}>
-        <Text style={s.memoTitulo}>Memória de Cálculo — Layout Geométrico — NBR 17505-2:2024 §5.9.2</Text>
+        <Text style={s.memoTitulo}>Memória de Cálculo — {areaLivre ? "Área Informada" : "Layout Geométrico"} — NBR 17505-2:2024 §5.9.2</Text>
 
         <Text style={s.memoLinha}>1. Volume requerido (maior tanque vertical cheio):</Text>
         <Text style={s.memoLinhaB}>   V_req = {f1(resultado.volumeRequerido_m3)} m³</Text>
@@ -481,16 +488,31 @@ function PaginaMemorialDimensionar({
         <Text style={[s.memoLinha, { marginTop: 4 }]}>2. Altura efetiva máxima disponível:</Text>
         <Text style={s.memoLinha}>   h_efetiva = h_max_muro − freeboard = {f2(projeto.alturaMaxMuro_m)} − {f2(resultado.freeboard_m)} = {f2(resultado.alturaEfetiva_m)} m</Text>
 
-        <Text style={[s.memoLinha, { marginTop: 4 }]}>3. Dimensionamento geométrico (L × W):</Text>
-        <Text style={s.memoLinha}>   Para cada fileira: L_row = d_borda(T0) + D0 + d_entre(T0,T1) + D1 + ... + d_borda(Tn)</Text>
-        <Text style={s.memoLinha}>   L_min = maior L_row entre as fileiras</Text>
-        <Text style={s.memoLinha}>   W_min = d_borda(Dmax_f1) + Dmax_f1 + d_entre_fileiras + Dmax_f2 + d_borda(Dmax_f2)</Text>
-        <Text style={[s.memoLinhaB, { marginTop: 2 }]}>   L = {f1(resultado.comprimentoSugerido_m)} m   W = {f1(resultado.larguraSugerida_m)} m</Text>
+        {areaLivre ? (
+          <>
+            <Text style={[s.memoLinha, { marginTop: 4 }]}>3. Área interna informada (formato irregular):</Text>
+            <Text style={s.memoLinhaB}>   A_interna = {f2(areaInterna)} m²  (informada pelo projetista)</Text>
+            <Text style={s.memoLinha}>   L_ef = √(A × 1,5) = {f2(Lef)} m</Text>
+            <Text style={s.memoLinhaB}>   W_ef = A / L_ef = {f2(Wef)} m</Text>
 
-        <Text style={[s.memoLinha, { marginTop: 4 }]}>4. Verificação de volume com dimensões calculadas:</Text>
-        <Text style={s.memoLinha}>   A_liq = L × W − ΣA_bases = {f2(resultado.areaTotalSugerida_m2)} − {f2(resultado.areaTotalSugerida_m2 - resultado.areaLiquidaMinima_m2)} = {f2(resultado.areaLiquidaMinima_m2)} m²</Text>
-        <Text style={s.memoLinha}>   h_req = (V_req + V_desl) / A_liq = ({f1(resultado.volumeRequerido_m3)} + {f3(totalVMuretas)}) / {f2(resultado.areaLiquidaMinima_m2)} = {f2(resultado.alturaEfetiva_m)} m</Text>
-        <Text style={s.memoLinhaB}>   h_parede = h_req + freeboard = {f2(resultado.alturaEfetiva_m)} + {f2(resultado.freeboard_m)} = {f2(resultado.alturaParede_m)} m</Text>
+            <Text style={[s.memoLinha, { marginTop: 4 }]}>4. Cálculo da altura mínima do dique:</Text>
+            <Text style={s.memoLinha}>   h_req = calcularAlturaDiqueMinimo(V_req, L_ef, W_ef, tanques, freeboard)</Text>
+            <Text style={s.memoLinhaB}>   h_parede = {f2(resultado.alturaParede_m)} m</Text>
+          </>
+        ) : (
+          <>
+            <Text style={[s.memoLinha, { marginTop: 4 }]}>3. Dimensionamento geométrico (L × W):</Text>
+            <Text style={s.memoLinha}>   Para cada fileira: L_row = d_borda(T0) + D0 + d_entre(T0,T1) + D1 + ... + d_borda(Tn)</Text>
+            <Text style={s.memoLinha}>   L_min = maior L_row entre as fileiras</Text>
+            <Text style={s.memoLinha}>   W_min = d_borda(Dmax_f1) + Dmax_f1 + d_entre_fileiras + Dmax_f2 + d_borda(Dmax_f2)</Text>
+            <Text style={[s.memoLinhaB, { marginTop: 2 }]}>   L = {f1(resultado.comprimentoSugerido_m)} m   W = {f1(resultado.larguraSugerida_m)} m</Text>
+
+            <Text style={[s.memoLinha, { marginTop: 4 }]}>4. Verificação de volume com dimensões calculadas:</Text>
+            <Text style={s.memoLinha}>   A_liq = L × W − ΣA_bases = {f2(resultado.areaTotalSugerida_m2)} − {f2(resultado.areaTotalSugerida_m2 - resultado.areaLiquidaMinima_m2)} = {f2(resultado.areaLiquidaMinima_m2)} m²</Text>
+            <Text style={s.memoLinha}>   h_req = (V_req + V_desl) / A_liq = ({f1(resultado.volumeRequerido_m3)} + {f3(totalVMuretas)}) / {f2(resultado.areaLiquidaMinima_m2)} = {f2(resultado.alturaEfetiva_m)} m</Text>
+            <Text style={s.memoLinhaB}>   h_parede = h_req + freeboard = {f2(resultado.alturaEfetiva_m)} + {f2(resultado.freeboard_m)} = {f2(resultado.alturaParede_m)} m</Text>
+          </>
+        )}
 
         <Text style={[s.memoLinha, { marginTop: 8, color: CARBONO_500 }]}>
           Referência normativa: NBR 17505-2:2024 §5.9.2.2.1
@@ -502,8 +524,12 @@ function PaginaMemorialDimensionar({
       <View style={s.table}>
         {[
           ["Volume requerido", `${f1(resultado.volumeRequerido_m3)} m³`, "§5.9.2.2.1"],
-          ["Comprimento interno sugerido (L)", `${f1(resultado.comprimentoSugerido_m)} m`, "§5.9.2"],
-          ["Largura interna sugerida (W)", `${f1(resultado.larguraSugerida_m)} m`, "§5.9.2"],
+          ...(areaLivre
+            ? [["Área interna (forma irregular)", `${f2(areaInterna)} m²`, "§5.9.2"]]
+            : [
+                ["Comprimento interno sugerido (L)", `${f1(resultado.comprimentoSugerido_m)} m`, "§5.9.2"],
+                ["Largura interna sugerida (W)", `${f1(resultado.larguraSugerida_m)} m`, "§5.9.2"],
+              ]),
           ["Altura da parede do dique", `${f2(resultado.alturaParede_m)} m`, "§5.9.2.2"],
           ["Freeboard (sobrealtura)", `${f2(resultado.freeboard_m)} m`, "§5.9.2.2.1"],
           ["Altura efetiva de contenção", `${f2(resultado.alturaEfetiva_m)} m`, "§5.9.2.2.1"],

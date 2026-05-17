@@ -546,6 +546,9 @@ export default function BaciaCalculadoraPage({
           alturaMaxMuro_m: p.alturaMaxMuro_m,
           freeboard_m: p.freeboard_m,
           V_deslocamentos_outros_m3: V_desl,
+          ...(p.formatoBaciaDim === "livre" && p.area_m2_dim
+            ? { area_m2: p.area_m2_dim }
+            : {}),
         }),
       };
     }
@@ -600,7 +603,10 @@ export default function BaciaCalculadoraPage({
   const { projeto } = estado;
 
   // Dimensões SVG
-  const formatoBaciaLivre = projeto.modo === "verificar" && projeto.baciaDims?.formatoBacia === "livre";
+  const formatoBaciaLivre =
+    projeto.modo === "verificar"
+      ? projeto.baciaDims?.formatoBacia === "livre"
+      : projeto.formatoBaciaDim === "livre";
   const areaSvgLivre = projeto.baciaDims?.area_m2 ?? 100;
   const svgL =
     projeto.modo === "verificar" && projeto.baciaDims
@@ -1004,6 +1010,46 @@ export default function BaciaCalculadoraPage({
           </div>
         )}
 
+        {/* Formato da planta — somente modo dimensionar */}
+        {projeto.modo === "dimensionar" && (
+          <div className="mt-4 rounded-lg border border-carbono-200 p-4">
+            <p className="text-sm font-semibold text-carbono-700 mb-3">Formato da planta da bacia</p>
+            <div className="flex gap-2 mb-4">
+              {(["retangular", "livre"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => atualizar({ formatoBaciaDim: f })}
+                  className={`flex-1 rounded-lg border-2 py-2 px-3 text-sm font-semibold transition ${
+                    (projeto.formatoBaciaDim ?? "retangular") === f
+                      ? "border-verde bg-verde/10 text-carbono"
+                      : "border-carbono-200 text-carbono-500 hover:border-carbono-400"
+                  }`}
+                >
+                  {f === "retangular"
+                    ? "⬜ Retangular (calculado automaticamente)"
+                    : "⬠ Área livre (forma irregular)"}
+                </button>
+              ))}
+            </div>
+            {(projeto.formatoBaciaDim ?? "retangular") === "retangular" ? (
+              <p className="text-xs text-carbono-400">
+                As dimensões L × W são calculadas automaticamente a partir dos diâmetros dos tanques
+                e das distâncias mínimas normativas (NBR 17505-2 §5.9.2).
+              </p>
+            ) : (
+              <NumberField
+                label="Área interna disponível"
+                unit="m²"
+                value={projeto.area_m2_dim ?? 0}
+                onChange={(v) => atualizar({ area_m2_dim: v ?? 0 })}
+                min={1}
+                step={1}
+                hint="Área real da planta interna da bacia, independente do formato (L, T, arredondada…)"
+              />
+            )}
+          </div>
+        )}
+
         {/* Muretas intermediárias */}
         <div className="mt-5 border-t border-carbono-100 pt-4">
           <div className="flex items-center justify-between mb-3">
@@ -1128,33 +1174,68 @@ export default function BaciaCalculadoraPage({
             </div>
           )}
 
-          {/* ── CARD 1: Layout da bacia (movido para primeiro) ── */}
+          {/* ── CARD 1: Layout da bacia ── */}
           <Card title="Layout da bacia">
-            <p className="text-xs text-carbono-500 mb-3">
-              {resultado.tipo === "dimensionar"
-                ? "Disposição geométrica dos tanques com distâncias mínimas respeitadas."
-                : "Disposição proporcional dos tanques na bacia existente."}
-              {" "}Clique em{" "}
-              <strong className="text-verde">+</strong> para adicionar tanques ou em{" "}
-              <strong>×</strong> para remover.
-            </p>
-            {formatoBaciaLivre && (
-              <div className="mb-2 flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-                <span>⚠</span>
-                <span>
-                  <strong>Forma irregular</strong> — layout aproximado (retângulo equivalente com mesma área).
-                  As dimensões L × W exibidas são apenas uma estimativa visual.
-                </span>
+            {formatoBaciaLivre ? (
+              <div className="py-6 text-center space-y-2">
+                <p className="text-2xl">⬠</p>
+                <p className="text-sm font-semibold text-carbono-700">Bacia de formato irregular</p>
+                <p className="text-xs text-carbono-400">
+                  Visualização de planta não disponível para formas irregulares.
+                  Os cálculos de volume são realizados com a área informada.
+                </p>
+                <div className="mt-3 flex justify-center gap-2">
+                  <button
+                    onClick={() => setModalFileira(0)}
+                    className="rounded-md border border-carbono-300 px-3 py-1 text-xs font-semibold hover:bg-creme"
+                  >
+                    + Tanque fileira sup.
+                  </button>
+                  <button
+                    onClick={() => setModalFileira(1)}
+                    className="rounded-md border border-carbono-300 px-3 py-1 text-xs font-semibold hover:bg-creme"
+                  >
+                    + Tanque fileira inf.
+                  </button>
+                </div>
+                {projeto.tanques.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {projeto.tanques.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between rounded bg-carbono-50 px-3 py-1 text-xs">
+                        <span className="font-mono font-semibold">{t.tag}</span>
+                        <span className="text-carbono-500">Ø{t.D_m} m · V={t.volume_m3.toFixed(1)} m³</span>
+                        <button
+                          onClick={() => removerTanque(t.id)}
+                          className="ml-2 text-carbono-400 hover:text-red-500 font-bold"
+                          title="Remover tanque"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            ) : (
+              <>
+                <p className="text-xs text-carbono-500 mb-3">
+                  {resultado.tipo === "dimensionar"
+                    ? "Disposição geométrica dos tanques com distâncias mínimas respeitadas."
+                    : "Disposição proporcional dos tanques na bacia existente."}
+                  {" "}Clique em{" "}
+                  <strong className="text-verde">+</strong> para adicionar tanques ou em{" "}
+                  <strong>×</strong> para remover.
+                </p>
+                <BaciaVisual
+                  tanques={projeto.tanques}
+                  posicoes={posicoesTanques}
+                  L_m={Math.max(svgL, 5)}
+                  W_m={Math.max(svgW, 5)}
+                  onAdicionarTanque={(f) => setModalFileira(f)}
+                  onRemoverTanque={removerTanque}
+                />
+              </>
             )}
-            <BaciaVisual
-              tanques={projeto.tanques}
-              posicoes={posicoesTanques}
-              L_m={Math.max(svgL, 5)}
-              W_m={Math.max(svgW, 5)}
-              onAdicionarTanque={(f) => setModalFileira(f)}
-              onRemoverTanque={removerTanque}
-            />
           </Card>
 
           {/* ── CARD 2: Resumo de volumes ── */}
@@ -1251,11 +1332,23 @@ export default function BaciaCalculadoraPage({
                           <p className="text-xs text-carbono-400">Maior tanque cheio (§5.9.2.2.1)</p>
                         </div>
                         <div>
-                          <p className="text-carbono-500 text-xs uppercase tracking-wider">Dimensões mínimas</p>
-                          <p className="font-mono text-lg font-bold">
-                            {d.comprimentoSugerido_m.toFixed(1)} × {d.larguraSugerida_m.toFixed(1)} m
-                          </p>
-                          <p className="text-xs text-carbono-400">Comprimento × Largura (geométrico)</p>
+                          {projeto.formatoBaciaDim === "livre" ? (
+                            <>
+                              <p className="text-carbono-500 text-xs uppercase tracking-wider">Área informada</p>
+                              <p className="font-mono text-lg font-bold">
+                                {fmt2(d.areaInterna_m2 ?? projeto.area_m2_dim ?? 0)} m²
+                              </p>
+                              <p className="text-xs text-carbono-400">Área interna disponível (irregular)</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-carbono-500 text-xs uppercase tracking-wider">Dimensões mínimas</p>
+                              <p className="font-mono text-lg font-bold">
+                                {d.comprimentoSugerido_m.toFixed(1)} × {d.larguraSugerida_m.toFixed(1)} m
+                              </p>
+                              <p className="text-xs text-carbono-400">Comprimento × Largura (geométrico)</p>
+                            </>
+                          )}
                         </div>
                         <div>
                           <p className="text-carbono-500 text-xs uppercase tracking-wider">Altura da parede</p>
@@ -1272,7 +1365,7 @@ export default function BaciaCalculadoraPage({
                           <p className="text-xs text-carbono-400">V_req / h_efetiva</p>
                         </div>
                       </div>
-                      {d.alertas.some((a) => a.code === "B007") && !d.alturaExcedeLimite && (
+                      {d.alertas.some((a) => a.code === "B007") && !d.alturaExcedeLimite && projeto.formatoBaciaDim !== "livre" && (
                         <div className="rounded bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-900">
                           ⚠️ Dimensões ajustadas automaticamente para respeitar h_parede ≤ {ALTURA_MAX_DIQUE_M.toFixed(1)} m.
                           Veja o alerta acima para detalhes do comprimento adotado.
@@ -1280,8 +1373,10 @@ export default function BaciaCalculadoraPage({
                       )}
                       {d.alturaExcedeLimite && (
                         <div className="rounded bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">
-                          ❌ Mesmo após expansão, h_parede ({fmt2(d.alturaParede_m)} m) excede {ALTURA_MAX_DIQUE_M.toFixed(1)} m.
-                          Reduza os tanques ou ajuste os parâmetros manualmente.
+                          {projeto.formatoBaciaDim === "livre"
+                            ? `❌ Altura necessária (${fmt2(d.alturaParede_m)} m) excede o limite de ${ALTURA_MAX_DIQUE_M.toFixed(1)} m. Aumente a área disponível ou reduza o volume dos tanques.`
+                            : `❌ Mesmo após expansão, h_parede (${fmt2(d.alturaParede_m)} m) excede ${ALTURA_MAX_DIQUE_M.toFixed(1)} m. Reduza os tanques ou ajuste os parâmetros manualmente.`
+                          }
                         </div>
                       )}
                       {totalVolMuretas > 0 && (
@@ -1297,9 +1392,20 @@ export default function BaciaCalculadoraPage({
                           <p>V_req = volume do maior tanque = {fmtVol(d.volumeRequerido_m3)} m³</p>
                           <p>h_max_muro = {fmt2(projeto.alturaMaxMuro_m)} m  (limite: {ALTURA_MAX_DIQUE_M.toFixed(1)} m)</p>
                           <p>h_efetiva = h_max − freeboard = {fmt2(projeto.alturaMaxMuro_m)} − {fmt2(d.freeboard_m)} = {fmt2(d.alturaEfetiva_m)} m</p>
-                          <p className="mt-1">─── Layout geométrico ───</p>
-                          <p>L = {d.comprimentoSugerido_m.toFixed(2)} m   W = {d.larguraSugerida_m.toFixed(2)} m</p>
-                          <p>Área total sugerida = {fmt2(d.areaTotalSugerida_m2)} m²</p>
+                          {projeto.formatoBaciaDim === "livre" ? (
+                            <>
+                              <p className="mt-1">─── Área interna informada (forma irregular) ───</p>
+                              <p>A_interna = {fmt2(d.areaInterna_m2 ?? 0)} m²  (informada pelo projetista)</p>
+                              <p>L_ef = √(A × 1,5) = {fmt2(Math.sqrt((d.areaInterna_m2 ?? 0) * 1.5))} m</p>
+                              <p>W_ef = A / L_ef = {fmt2(d.areaInterna_m2 ?? 0)} / {fmt2(Math.sqrt((d.areaInterna_m2 ?? 0) * 1.5))} = {fmt2((d.areaInterna_m2 ?? 0) / Math.sqrt((d.areaInterna_m2 ?? 0) * 1.5))} m</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="mt-1">─── Layout geométrico ───</p>
+                              <p>L = {d.comprimentoSugerido_m.toFixed(2)} m   W = {d.larguraSugerida_m.toFixed(2)} m</p>
+                              <p>Área total sugerida = {fmt2(d.areaTotalSugerida_m2)} m²</p>
+                            </>
+                          )}
                           <p className="mt-1">─── Deslocamentos internos (NBR 17505-2 §5.9.2.2.1) ───</p>
                           <p>− V_desl_bases  (anéis, todos os {projeto.tanques.length} tanques) = {fmt2(d.deslocamentos.V_desl_bases_m3)} m³</p>
                           <p>− V_desl_corpos (corpos, {projeto.tanques.length - 1} não-maiores) = {fmt2(d.deslocamentos.V_desl_corpos_m3)} m³</p>
