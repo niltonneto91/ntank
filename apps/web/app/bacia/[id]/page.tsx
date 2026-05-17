@@ -1105,7 +1105,7 @@ export default function BaciaCalculadoraPage({
                         <div>
                           <p className="text-carbono-500 text-xs uppercase tracking-wider">Volume disponível</p>
                           <p className="font-mono text-lg font-bold">{fmtVol(d.volumeDisponivel_m3)} m³</p>
-                          <p className="text-xs text-carbono-400">(L×W − ΣA_bases) × h_efetiva</p>
+                          <p className="text-xs text-carbono-400">L×W×h_efetiva − deslocamentos</p>
                         </div>
                         <div>
                           <p className="text-carbono-500 text-xs uppercase tracking-wider">Altura efetiva</p>
@@ -1148,15 +1148,15 @@ export default function BaciaCalculadoraPage({
                         </summary>
                         <div className="mt-3 space-y-1 font-mono text-carbono-700">
                           <p>V_req = volume do maior tanque vertical = {fmtVol(d.volumeRequerido_m3)} m³</p>
-                          <p>ΣA_bases = {fmt2(d.areaBasesTanques_m2)} m²  (π/4 × D² para cada tanque)</p>
                           <p>h_efetiva = h_total − freeboard = {fmt2(d.alturaEfetiva_m + d.freeboard_m)} − {fmt2(d.freeboard_m)} = {fmt2(d.alturaEfetiva_m)} m</p>
-                          {totalVolMuretas > 0 && (
-                            <p>V_desl_muretas = {totalVolMuretas.toFixed(3)} m³</p>
-                          )}
-                          <p>V_disp = (L×W − ΣA_bases) × h_efetiva − V_desl</p>
-                          <p>       = ({projeto.baciaDims?.comprimento_m.toFixed(1)} × {projeto.baciaDims?.largura_m.toFixed(1)} − {fmt2(d.areaBasesTanques_m2)}) × {fmt2(d.alturaEfetiva_m)} − {totalVolMuretas.toFixed(3)}</p>
-                          <p>       = {fmtVol(d.volumeDisponivel_m3)} m³</p>
-                          <p>Referência: NBR 17505-2:2024 §5.9.2.2.1</p>
+                          <p>V_bruto  = L × W × h_efetiva = {projeto.baciaDims?.comprimento_m.toFixed(2)} × {projeto.baciaDims?.largura_m.toFixed(2)} × {fmt2(d.alturaEfetiva_m)} = {fmt2((projeto.baciaDims?.comprimento_m ?? 0) * (projeto.baciaDims?.largura_m ?? 0) * d.alturaEfetiva_m)} m³</p>
+                          <p className="mt-1">─── Deslocamentos internos (NBR 17505-2 §5.9.2.2.1) ───</p>
+                          <p>− V_desl_bases  (anéis, todos os {projeto.tanques.length} tanques) = {fmt2(d.deslocamentos.V_desl_bases_m3)} m³</p>
+                          <p>− V_desl_corpos (corpos, {projeto.tanques.length - 1} não-maiores) = {fmt2(d.deslocamentos.V_desl_corpos_m3)} m³</p>
+                          <p>− V_desl_outros (muretas e outros)          = {fmt2(d.deslocamentos.V_desl_outros_m3)} m³</p>
+                          <p className="border-t border-carbono-300 pt-1 mt-1">V_disponível = {fmtVol(d.volumeDisponivel_m3)} m³</p>
+                          <p>Utilização    = {fmtVol(d.volumeDisponivel_m3)} / {fmtVol(d.volumeRequerido_m3)} = {d.utilizacao_pct.toFixed(1)} %</p>
+                          <p className="mt-1 text-carbono-500">Ref: NBR 17505-2:2024 §5.9.2.2.1</p>
                         </div>
                       </details>
                     </div>
@@ -1218,16 +1218,18 @@ export default function BaciaCalculadoraPage({
                         <div className="mt-3 space-y-1 font-mono text-carbono-700">
                           <p>V_req = volume do maior tanque = {fmtVol(d.volumeRequerido_m3)} m³</p>
                           <p>h_max_muro = {fmt2(projeto.alturaMaxMuro_m)} m  (limite: {ALTURA_MAX_DIQUE_M.toFixed(1)} m)</p>
-                          <p>h_efetiva_max = h_max − freeboard = {fmt2(d.alturaEfetiva_m)} m</p>
-                          <p>─── Layout geométrico ───</p>
-                          <p>L_geo = Σ(diâmetros + dist_entre + bordas) por fileira → maior fileira</p>
-                          <p>W_geo = d_borda + Dmax_f1 + d_entre_fileiras + Dmax_f2 + d_borda</p>
-                          <p>L = {d.comprimentoSugerido_m.toFixed(1)} m   W = {d.larguraSugerida_m.toFixed(1)} m</p>
-                          <p>─── Verificação de volume ───</p>
-                          <p>A_liq = L×W − ΣA_bases = {fmt2(d.areaTotalSugerida_m2)} − {fmt2(d.areaTotalSugerida_m2 - d.areaLiquidaMinima_m2)} = {fmt2(d.areaLiquidaMinima_m2)} m²</p>
-                          <p>h_efetiva_req = V_req / A_liq = {fmtVol(d.volumeRequerido_m3)} / {fmt2(d.areaLiquidaMinima_m2)} = {fmt2(d.alturaEfetiva_m)} m</p>
+                          <p>h_efetiva = h_max − freeboard = {fmt2(projeto.alturaMaxMuro_m)} − {fmt2(d.freeboard_m)} = {fmt2(d.alturaEfetiva_m)} m</p>
+                          <p className="mt-1">─── Layout geométrico ───</p>
+                          <p>L = {d.comprimentoSugerido_m.toFixed(2)} m   W = {d.larguraSugerida_m.toFixed(2)} m</p>
+                          <p>Área total sugerida = {fmt2(d.areaTotalSugerida_m2)} m²</p>
+                          <p className="mt-1">─── Deslocamentos internos (NBR 17505-2 §5.9.2.2.1) ───</p>
+                          <p>− V_desl_bases  (anéis, todos os {projeto.tanques.length} tanques) = {fmt2(d.deslocamentos.V_desl_bases_m3)} m³</p>
+                          <p>− V_desl_corpos (corpos, {projeto.tanques.length - 1} não-maiores) = {fmt2(d.deslocamentos.V_desl_corpos_m3)} m³</p>
+                          <p>− V_desl_outros (muretas e outros)          = {fmt2(d.deslocamentos.V_desl_outros_m3)} m³</p>
+                          <p className="mt-1">─── Dimensionamento da altura ───</p>
+                          <p>h_efetiva_req = (V_req + V_deslocamentos) / A_ef</p>
                           <p>h_parede = h_efetiva_req + freeboard = {fmt2(d.alturaEfetiva_m)} + {fmt2(d.freeboard_m)} = {fmt2(d.alturaParede_m)} m</p>
-                          <p>Referência: NBR 17505-2:2024 §5.9.2.2.1</p>
+                          <p className="mt-1 text-carbono-500">Ref: NBR 17505-2:2024 §5.9.2.2.1</p>
                         </div>
                       </details>
                     </div>

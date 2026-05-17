@@ -13,7 +13,7 @@
 import {
   calcularVolumeRequerido,
   calcularVolumeDisponivel,
-  calcularAreaBasesTanques,
+  calcularDeslocamentos,
   calcularAlturaDiqueMinimo,
   FREEBOARD_MINIMO_M,
   ALTURA_MAX_DIQUE_M,
@@ -25,6 +25,7 @@ import type {
   EntradaDimensionarBacia,
   ResultadoVerificarBacia,
   ResultadoDimensionarBacia,
+  DetalhamentoDeslocamentos,
   PosicaoTanqueBacia,
   AlertaBacia,
 } from "./types.js";
@@ -196,9 +197,13 @@ export function verificarBacia(
     });
   }
 
+  const V_outros = entrada.V_deslocamentos_outros_m3 ?? 0;
   const volumeRequerido = round2(calcularVolumeRequerido(entrada.tanques));
-  const areaBasesTanques = round2(calcularAreaBasesTanques(entrada.tanques));
   const alturaEfetiva = round2(Math.max(entrada.alturaTotal_m - fb, 0));
+
+  // Deslocamentos internos com o modelo físico correto
+  const desl = calcularDeslocamentos(entrada.tanques, alturaEfetiva);
+
   const volumeDisponivel = round2(
     calcularVolumeDisponivel(
       entrada.comprimento_m,
@@ -206,9 +211,16 @@ export function verificarBacia(
       entrada.tanques,
       entrada.alturaTotal_m,
       fb,
-      entrada.V_deslocamentos_outros_m3 ?? 0,
+      V_outros,
     ),
   );
+
+  const deslocamentos: DetalhamentoDeslocamentos = {
+    V_desl_bases_m3: round2(desl.V_desl_bases_m3),
+    V_desl_corpos_m3: round2(desl.V_desl_corpos_m3),
+    V_desl_outros_m3: round2(V_outros),
+    V_desl_total_m3: round2(desl.V_desl_total_m3 + V_outros),
+  };
 
   const aprovado = volumeDisponivel >= volumeRequerido && !alturaExcedeMuro;
   const utilizacao_pct =
@@ -257,7 +269,7 @@ export function verificarBacia(
     volumeDisponivel_m3: volumeDisponivel,
     alturaEfetiva_m: alturaEfetiva,
     freeboard_m: fb,
-    areaBasesTanques_m2: areaBasesTanques,
+    deslocamentos,
     aprovado,
     utilizacao_pct,
     alturaExcedeMuro,
@@ -299,6 +311,10 @@ export function dimensionarBacia(
     });
   }
 
+  const desl0: DetalhamentoDeslocamentos = {
+    V_desl_bases_m3: 0, V_desl_corpos_m3: 0, V_desl_outros_m3: 0, V_desl_total_m3: 0,
+  };
+
   if (entrada.tanques.length === 0) {
     alertas.push({
       code: "B010",
@@ -315,6 +331,7 @@ export function dimensionarBacia(
       comprimentoSugerido_m: 0,
       larguraSugerida_m: 0,
       alturaExcedeLimite: false,
+      deslocamentos: desl0,
       distanciamentos: [],
       posicoesTanques: [],
       alertas,
@@ -345,6 +362,7 @@ export function dimensionarBacia(
       comprimentoSugerido_m: 0,
       larguraSugerida_m: 0,
       alturaExcedeLimite: true,
+      deslocamentos: desl0,
       distanciamentos: calcularDistanciamentos(entrada.tanques),
       posicoesTanques: [],
       alertas,
@@ -352,7 +370,7 @@ export function dimensionarBacia(
   }
 
   // -----------------------------------------------------------------------
-  // Passo 1-3: Layout geométrico → L e W mínimos
+  // Passo 1-3: Layout geométrico → L e W mínimos por espaçamentos normativos
   // -----------------------------------------------------------------------
   const { row1, row2 } = montarFileiras(entrada.tanques);
 
@@ -364,37 +382,48 @@ export function dimensionarBacia(
   let L = ceilDecim1(L_geo);
   let W = ceilDecim1(W_geo);
 
-  const areaBasesTanques = calcularAreaBasesTanques(entrada.tanques);
-
   // -----------------------------------------------------------------------
   // Passo 4: Calcular h necessária com L e W geométricos
+  //
+  // Fórmula: h_parede = calcularAlturaDiqueMinimo(V_req, L, W, tanques, fb, V_desl)
+  //
+  // A fórmula usa o modelo físico correto:
+  //   h_efetiva × [L×W − Σ_{j≠maior} A_j] = V_req + V_desl + V_bases_flat − V_corpos_flat
   // -----------------------------------------------------------------------
-  const areaLiquidaMinima = round2((volumeRequerido + V_desl) / alturaEfetiva);
+  const areaLiquidaMinima = round2((volumeRequerido + V_desl) / alturaEfetiva); // aprox. para exibição
 
-  let areaLiquidaAtual = Math.max(L * W - areaBasesTanques, 0.001);
-  let h_efetiva_required = round2((volumeRequerido + V_desl) / areaLiquidaAtual);
-  let h_parede = round2(h_efetiva_required + fb);
+  let h_parede = round2(calcularAlturaDiqueMinimo(volumeRequerido, L, W, entrada.tanques, fb, V_desl));
+  let h_efetiva_required = round2(h_parede - fb);
   let alturaExcedeLimite = h_parede > alturaMaxMuro;
 
   // -----------------------------------------------------------------------
-  // Passo 5: Se h excede limite, expandir L diretamente pela fórmula correta
+  // Passo 5: Se h excede limite, expandir L pela fórmula direta correta
   //
-  // Alvo: L × W − A_bases ≥ A_liq_necessaria
-  //   → L ≥ (A_liq_necessaria + A_bases) / W
-  //
-  // (O antigo sqrt(A_liq_needed/A_liq_current) × L era incorreto porque
-  //  não contabiliza o termo −A_bases, causando subestimação de L.)
+  // Alvo: h_efetiva_max × [L×W − A_corpos] = V_req + V_desl + V_bases_flat − V_corpos_flat
+  //   → L×W = (numerador / h_efetiva_max) + A_corpos
+  //   → L = ceil((numerador / h_efetiva_max + A_corpos) / W)
   // -----------------------------------------------------------------------
   if (alturaExcedeLimite) {
     const L_original = L;
-    const h_efetiva_disponivel = round2(alturaMaxMuro - fb);
-    const areaLiquidaNecessaria = round2((volumeRequerido + V_desl) / h_efetiva_disponivel);
-    // Solução direta: L_min = (A_liq_necessaria + A_bases) / W  (arredondado para cima)
-    L = ceilDecim1((areaLiquidaNecessaria + areaBasesTanques) / W);
+    const h_efetiva_max = alturaMaxMuro - fb;
+
+    // Pré-computar termos para a equação de L
+    const tanqueMaior = entrada.tanques.reduce((m, t) => t.volume_m3 > m.volume_m3 ? t : m);
+    const naoMaiores = entrada.tanques.filter(t => t.id !== tanqueMaior.id);
+    const A_corpos = naoMaiores.reduce((acc, t) => acc + (Math.PI / 4) * t.D_m * t.D_m, 0);
+    const V_bases_flat = entrada.tanques.reduce((acc, t) => {
+      const D = (t.diametroAnel_m && t.diametroAnel_m > t.D_m) ? t.diametroAnel_m : t.D_m;
+      return acc + (Math.PI / 4) * D * D * (t.alturaAnel_m ?? 0);
+    }, 0);
+    const V_corpos_flat = naoMaiores.reduce((acc, t) =>
+      acc + (Math.PI / 4) * t.D_m * t.D_m * (t.alturaAnel_m ?? 0), 0);
+
+    const numerador = volumeRequerido + V_desl + V_bases_flat - V_corpos_flat;
+    L = ceilDecim1((numerador / h_efetiva_max + A_corpos) / W);
+
     // Recalcular com L expandido
-    areaLiquidaAtual = Math.max(L * W - areaBasesTanques, 0.001);
-    h_efetiva_required = round2((volumeRequerido + V_desl) / areaLiquidaAtual);
-    h_parede = round2(h_efetiva_required + fb);
+    h_parede = round2(calcularAlturaDiqueMinimo(volumeRequerido, L, W, entrada.tanques, fb, V_desl));
+    h_efetiva_required = round2(h_parede - fb);
     alturaExcedeLimite = h_parede > alturaMaxMuro + 0.005; // tolerância de arredondamento
 
     alertas.push({
@@ -407,6 +436,15 @@ export function dimensionarBacia(
     });
   }
 
+  // Deslocamentos na h_efetiva final (para exibição no painel)
+  const deslFinal = calcularDeslocamentos(entrada.tanques, h_efetiva_required);
+  const deslocamentos: DetalhamentoDeslocamentos = {
+    V_desl_bases_m3: round2(deslFinal.V_desl_bases_m3),
+    V_desl_corpos_m3: round2(deslFinal.V_desl_corpos_m3),
+    V_desl_outros_m3: round2(V_desl),
+    V_desl_total_m3: round2(deslFinal.V_desl_total_m3 + V_desl),
+  };
+
   const areaTotalSugerida = round2(L * W);
 
   const distanciamentos = calcularDistanciamentos(entrada.tanques);
@@ -414,7 +452,7 @@ export function dimensionarBacia(
 
   return {
     volumeRequerido_m3: volumeRequerido,
-    alturaEfetiva_m: round2(h_efetiva_required),
+    alturaEfetiva_m: h_efetiva_required,
     alturaParede_m: h_parede,
     freeboard_m: fb,
     areaLiquidaMinima_m2: areaLiquidaMinima,
@@ -422,6 +460,7 @@ export function dimensionarBacia(
     comprimentoSugerido_m: round1(L),
     larguraSugerida_m: round1(W),
     alturaExcedeLimite,
+    deslocamentos,
     distanciamentos,
     posicoesTanques,
     alertas,

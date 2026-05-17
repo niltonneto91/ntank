@@ -364,26 +364,25 @@ function PaginaMemorialVerificar({
         <Text style={s.memoLinha}>1. Volume requerido (maior tanque vertical cheio):</Text>
         <Text style={s.memoLinhaB}>   V_req = {f1(resultado.volumeRequerido_m3)} m³</Text>
 
-        <Text style={[s.memoLinha, { marginTop: 4 }]}>2. Soma das áreas de base dos tanques:</Text>
-        <Text style={s.memoLinha}>   ΣA_bases = Σ(π/4 × Dᵢ²) = {f2(resultado.areaBasesTanques_m2)} m²</Text>
-
-        <Text style={[s.memoLinha, { marginTop: 4 }]}>3. Altura efetiva de contenção:</Text>
+        <Text style={[s.memoLinha, { marginTop: 4 }]}>2. Altura efetiva de contenção:</Text>
         <Text style={s.memoLinha}>   h_efetiva = h_total − freeboard</Text>
         <Text style={s.memoLinhaB}>   h_efetiva = {f2(dims.alturaTotal_m)} − {f2(resultado.freeboard_m)} = {f2(resultado.alturaEfetiva_m)} m</Text>
 
-        {totalVMuretas > 0 && (
-          <>
-            <Text style={[s.memoLinha, { marginTop: 4 }]}>4. Volume deslocado por muretas intermediárias:</Text>
-            <Text style={s.memoLinhaB}>   V_desl_muretas = {f3(totalVMuretas)} m³</Text>
-          </>
-        )}
+        <Text style={[s.memoLinha, { marginTop: 4 }]}>3. Volume bruto da bacia:</Text>
+        <Text style={s.memoLinha}>   V_bruto = L × W × h_efetiva</Text>
+        <Text style={s.memoLinhaB}>   V_bruto = {f2(dims.comprimento_m)} × {f2(dims.largura_m)} × {f2(resultado.alturaEfetiva_m)} = {f1(dims.comprimento_m * dims.largura_m * resultado.alturaEfetiva_m)} m³</Text>
 
-        <Text style={[s.memoLinha, { marginTop: 4 }]}>{totalVMuretas > 0 ? "5." : "4."} Volume líquido disponível:</Text>
-        <Text style={s.memoLinha}>   V_disp = (L × W − ΣA_bases) × h_efetiva − V_desl_muretas</Text>
-        <Text style={s.memoLinha}>   V_disp = ({f2(dims.comprimento_m)} × {f2(dims.largura_m)} − {f2(resultado.areaBasesTanques_m2)}) × {f2(resultado.alturaEfetiva_m)} − {f3(totalVMuretas)}</Text>
-        <Text style={s.memoLinhaB}>   V_disp = {f1(resultado.volumeDisponivel_m3)} m³</Text>
+        <Text style={[s.memoLinha, { marginTop: 4 }]}>4. Deslocamentos internos (NBR 17505-2 §5.9.2.2.1):</Text>
+        <Text style={s.memoLinha}>   − V_desl_bases (anéis de fundação, todos os {projeto.tanques.length} tanques) = {f2(resultado.deslocamentos.V_desl_bases_m3)} m³</Text>
+        <Text style={s.memoLinha}>   − V_desl_corpos (corpos, {projeto.tanques.length - 1} tanques não-maiores)     = {f2(resultado.deslocamentos.V_desl_corpos_m3)} m³</Text>
+        <Text style={s.memoLinha}>   − V_desl_outros (muretas e outros)                        = {f2(resultado.deslocamentos.V_desl_outros_m3)} m³</Text>
+        <Text style={s.memoLinhaB}>   V_desl_total = {f2(resultado.deslocamentos.V_desl_total_m3 + resultado.deslocamentos.V_desl_outros_m3)} m³</Text>
 
-        <Text style={[s.memoLinha, { marginTop: 4 }]}>{totalVMuretas > 0 ? "6." : "5."} Verificação:</Text>
+        <Text style={[s.memoLinha, { marginTop: 4 }]}>5. Volume líquido disponível:</Text>
+        <Text style={s.memoLinha}>   V_disp = V_bruto − V_desl_total</Text>
+        <Text style={s.memoLinhaB}>   V_disp = {f1(dims.comprimento_m * dims.largura_m * resultado.alturaEfetiva_m)} − {f2(resultado.deslocamentos.V_desl_total_m3 + resultado.deslocamentos.V_desl_outros_m3)} = {f1(resultado.volumeDisponivel_m3)} m³</Text>
+
+        <Text style={[s.memoLinha, { marginTop: 4 }]}>6. Verificação:</Text>
         <Text style={[s.memoLinhaB, { color: resultado.aprovado ? "#065f46" : "#991b1b" }]}>
           {"   "}V_disp ({f1(resultado.volumeDisponivel_m3)} m³) {resultado.aprovado ? "≥" : "<"} V_req ({f1(resultado.volumeRequerido_m3)} m³) → {statusTxt}
         </Text>
@@ -401,9 +400,12 @@ function PaginaMemorialVerificar({
           ["Volume disponível na bacia", `${f1(resultado.volumeDisponivel_m3)} m³`, "§5.9.2.2.1"],
           ["Altura efetiva de contenção", `${f2(resultado.alturaEfetiva_m)} m`, "§5.9.2.2.1"],
           ["Freeboard (sobrealtura)", `${f2(resultado.freeboard_m)} m`, "§5.9.2.2.1"],
-          ["Área de base dos tanques", `${f2(resultado.areaBasesTanques_m2)} m²`, ""],
+          ["Desl. anéis de fundação (todos)", `${f2(resultado.deslocamentos.V_desl_bases_m3)} m³`, "§5.9.2.2.1"],
+          ["Desl. corpos (não-maiores)", `${f2(resultado.deslocamentos.V_desl_corpos_m3)} m³`, "§5.9.2.2.1"],
+          ...(resultado.deslocamentos.V_desl_outros_m3 > 0
+            ? [["Desl. muretas e outros", `${f2(resultado.deslocamentos.V_desl_outros_m3)} m³`, ""]]
+            : []),
           ["Utilização da bacia", `${resultado.utilizacao_pct.toFixed(1).replace(".", ",")} %`, ""],
-          ...(totalVMuretas > 0 ? [["Volume deslocado (muretas)", `${f3(totalVMuretas)} m³`, ""]] : []),
           ["Resultado", statusTxt, "§5.9.2.2.1"],
         ].map(([label, valor, norma], i, arr) => (
           <View key={i} style={i === arr.length - 1 ? s.tRowLast : s.tRow}>

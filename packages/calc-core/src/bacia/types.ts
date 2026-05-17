@@ -102,6 +102,28 @@ export interface DistanciamentoTanque {
 }
 
 // ---------------------------------------------------------------------------
+// Detalhamento de deslocamentos internos
+// ---------------------------------------------------------------------------
+
+/**
+ * Decomposição dos volumes que ocupam espaço interno da bacia,
+ * reduzindo o volume líquido disponível para contenção.
+ */
+export interface DetalhamentoDeslocamentos {
+  /** Volume deslocado pelos anéis de fundação (base de concreto) de TODOS os tanques [m³] */
+  V_desl_bases_m3: number;
+  /**
+   * Volume deslocado pelo corpo dos tanques NÃO-MAIORES acima dos anéis de fundação [m³].
+   * O tanque maior é excluído porque, ao falhar, seu interior fica acessível ao líquido.
+   */
+  V_desl_corpos_m3: number;
+  /** Volume de muretas intermediárias, tubulações e outros informados pelo usuário [m³] */
+  V_desl_outros_m3: number;
+  /** Soma total de todos os deslocamentos [m³] */
+  V_desl_total_m3: number;
+}
+
+// ---------------------------------------------------------------------------
 // Verificação de bacia existente
 // ---------------------------------------------------------------------------
 
@@ -138,15 +160,15 @@ export interface ResultadoVerificarBacia {
   volumeRequerido_m3: number;
   /**
    * Volume líquido disponível da bacia [m³]:
-   *   = (L × W − ΣA_bases) × h_efetiva − V_deslocamentos_outros
+   *   = L × W × h_efetiva − V_desl_bases − V_desl_corpos − V_desl_outros
    */
   volumeDisponivel_m3: number;
   /** Altura efetiva para contenção: alturaTotal − freeboard [m] */
   alturaEfetiva_m: number;
   /** Sobrealtura adotada [m] */
   freeboard_m: number;
-  /** Soma das áreas de base dos tanques (π/4 × D²) [m²] */
-  areaBasesTanques_m2: number;
+  /** Decomposição dos volumes deslocados internamente */
+  deslocamentos: DetalhamentoDeslocamentos;
   /** A bacia atende ao volume mínimo requerido? */
   aprovado: boolean;
   /** Percentual: volumeDisponivel / volumeRequerido × 100 [%] */
@@ -201,9 +223,9 @@ export interface ResultadoDimensionarBacia {
   alturaParede_m: number;
   /** Sobrealtura adotada [m] */
   freeboard_m: number;
-  /** Área líquida mínima necessária (V_req / h_efetiva) [m²] */
+  /** Área líquida mínima aproximada (V_req / h_efetiva) [m²] */
   areaLiquidaMinima_m2: number;
-  /** Área total interna da bacia sugerida (inclui áreas das bases) [m²] */
+  /** Área total interna da bacia sugerida [m²] */
   areaTotalSugerida_m2: number;
   /** Comprimento interno sugerido da bacia [m] */
   comprimentoSugerido_m: number;
@@ -214,6 +236,8 @@ export interface ResultadoDimensionarBacia {
    * Se true: aumentar a área da bacia ou reduzir o volume dos tanques.
    */
   alturaExcedeLimite: boolean;
+  /** Decomposição dos volumes deslocados internamente (calculada na h_efetiva final) */
+  deslocamentos: DetalhamentoDeslocamentos;
   distanciamentos: DistanciamentoTanque[];
   /** Posições geométricas dos tanques no plano da bacia (para SVG) */
   posicoesTanques: PosicaoTanqueBacia[];
