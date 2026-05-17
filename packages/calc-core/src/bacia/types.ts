@@ -46,6 +46,11 @@ export interface TanqueBacia {
    * Tipicamente 0,5 m a 1,0 m maior que D_m (depende do projeto civil).
    */
   diametroAnel_m?: number;
+  /**
+   * Fileira preferencial do tanque no layout da bacia: 0 = superior, 1 = inferior.
+   * Se undefined, o algoritmo decide automaticamente pelo diâmetro (maiores → superior).
+   */
+  fileira?: 0 | 1;
 }
 
 // ---------------------------------------------------------------------------

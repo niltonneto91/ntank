@@ -51,14 +51,27 @@ interface FileirasLayout {
   row2: TanqueBacia[];
 }
 
-/** Divide os tanques (ordenados por D desc) em 1 ou 2 fileiras. */
+/**
+ * Divide os tanques em 1 ou 2 fileiras respeitando o campo `fileira` de cada tanque.
+ *
+ * Regras:
+ * - `fileira === 1` → sempre na fileira inferior (row2), independente do diâmetro.
+ * - `fileira === 0` ou `undefined` → fileira superior (row1), ordenados por D desc.
+ * - Retrocompatibilidade: se não há tanques forçados em row2 e total ≤ 3, retorna 1 fileira
+ *   (comportamento original para projetos antigos sem o campo `fileira`).
+ */
 function montarFileiras(tanques: TanqueBacia[]): FileirasLayout {
-  const sorted = [...tanques].sort((a, b) => b.D_m - a.D_m);
-  if (sorted.length <= 3) {
-    return { row1: sorted, row2: [] };
+  const row2 = [...tanques.filter((t) => t.fileira === 1)]
+    .sort((a, b) => b.D_m - a.D_m);
+  const row1Candidates = [...tanques.filter((t) => t.fileira !== 1)]
+    .sort((a, b) => b.D_m - a.D_m);
+
+  // Sem tanques forçados em row2 e ≤3 tanques no total → 1 fileira (retrocompat)
+  if (row2.length === 0 && row1Candidates.length <= 3) {
+    return { row1: row1Candidates, row2: [] };
   }
-  const corte = Math.ceil(sorted.length / 2);
-  return { row1: sorted.slice(0, corte), row2: sorted.slice(corte) };
+
+  return { row1: row1Candidates, row2 };
 }
 
 /**

@@ -163,6 +163,7 @@ export function criarTanqueBacia(
     volume_m3: parcial?.volume_m3 ?? ((Math.PI / 4) * D * D * H),
     alturaAnel_m: parcial?.alturaAnel_m ?? 0,
     diametroAnel_m: parcial?.diametroAnel_m,
+    fileira: parcial?.fileira,
   };
 }
 

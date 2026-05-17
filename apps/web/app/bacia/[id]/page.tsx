@@ -39,7 +39,8 @@ interface BaciaVisualProps {
   posicoes: PosicaoTanqueBacia[];
   L_m: number;
   W_m: number;
-  onAdicionarTanque: () => void;
+  /** Callback chamado com a fileira alvo: 0 = superior, 1 = inferior */
+  onAdicionarTanque: (fileira: 0 | 1) => void;
   onRemoverTanque: (id: string) => void;
 }
 
@@ -60,6 +61,10 @@ function BaciaVisual({
 
   const baciX = PADDING_H;
   const baciY = PADDING_V + PADDING_TOP;
+
+  // Fontes adaptativas — proporcionais ao viewBox para evitar blur em SVGs escalados
+  const fSizeMain = Math.max(0.55, viewW * 0.016); // labels L×W
+  const fSizeCota = Math.max(0.32, viewW * 0.010); // cotas âmbar de distância
 
   // Verificar status de distância de cada tanque
   const statusTanque = useMemo(() => {
@@ -91,6 +96,7 @@ function BaciaVisual({
       viewBox={`0 0 ${viewW} ${viewH}`}
       className="w-full rounded border border-carbono-200 bg-white"
       style={{ maxHeight: 520 }}
+      textRendering="geometricPrecision"
       aria-label="Layout da bacia de contenção"
     >
       <defs>
@@ -142,7 +148,7 @@ function BaciaVisual({
       <g stroke="#64748b">
         <line x1={baciX} y1={baciY - 0.8} x2={baciX + L_m} y2={baciY - 0.8} strokeWidth="0.05"
           markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
-        <text x={baciX + L_m / 2} y={baciY - 1.0} fontSize="0.38" textAnchor="middle"
+        <text x={baciX + L_m / 2} y={baciY - 1.0} fontSize={fSizeMain} textAnchor="middle"
           fontFamily="monospace" fontWeight="bold" fill="#334155">
           {L_m.toFixed(1)} m
         </text>
@@ -151,7 +157,7 @@ function BaciaVisual({
       <g stroke="#64748b">
         <line x1={baciX - 0.8} y1={baciY} x2={baciX - 0.8} y2={baciY + W_m} strokeWidth="0.05"
           markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
-        <text x={baciX - 1.3} y={baciY + W_m / 2} fontSize="0.38" textAnchor="middle"
+        <text x={baciX - 1.3} y={baciY + W_m / 2} fontSize={fSizeMain} textAnchor="middle"
           fontFamily="monospace" fontWeight="bold" fill="#334155"
           transform={`rotate(-90, ${baciX - 1.3}, ${baciY + W_m / 2})`}>
           {W_m.toFixed(1)} m
@@ -237,7 +243,7 @@ function BaciaVisual({
                   strokeDasharray="0.18 0.08"
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text x={(baciX + svgCx - R) / 2} y={svgCy - 0.18}
-                  fontSize="0.24" textAnchor="middle" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
                   {dMinMuro.toFixed(2)}m
                 </text>
               </g>
@@ -250,7 +256,7 @@ function BaciaVisual({
                   strokeDasharray="0.18 0.08"
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text x={svgCx + R * 0.3 + 0.15} y={(baciY + svgCy - R) / 2}
-                  fontSize="0.24" textAnchor="start" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="start" fontFamily="monospace">
                   {dMinMuro.toFixed(2)}m
                 </text>
               </g>
@@ -263,7 +269,7 @@ function BaciaVisual({
                   strokeDasharray="0.18 0.08"
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text x={svgCx + R * 0.3 + 0.15} y={(svgCy + R + baciY + W_m) / 2}
-                  fontSize="0.24" textAnchor="start" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="start" fontFamily="monospace">
                   {dMinMuro.toFixed(2)}m
                 </text>
               </g>
@@ -279,7 +285,7 @@ function BaciaVisual({
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text
                   x={(svgCx + R + baciX + L_m) / 2} y={svgCy - 0.18}
-                  fontSize="0.24" textAnchor="middle" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
                   {distMinTanqueMuro(tanque.D_m).toFixed(2)}m
                 </text>
               </g>
@@ -296,7 +302,7 @@ function BaciaVisual({
                 <text
                   x={(cotaEntreProximo.xIni + cotaEntreProximo.xFim) / 2}
                   y={cotaEntreProximo.yLinha - 0.18}
-                  fontSize="0.24" textAnchor="middle" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
                   {cotaEntreProximo.dMin.toFixed(2)}m
                 </text>
               </g>
@@ -309,7 +315,7 @@ function BaciaVisual({
 
       {/* ─── Botões "+" nas 4 extremidades ─── */}
       {/* Fileira 0 — esquerda */}
-      <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
+      <g onClick={() => onAdicionarTanque(0)} style={{ cursor: "pointer" }}>
         <circle cx={baciX - PADDING_H * 0.6} cy={baciY + centrosFileiras.yF0}
           r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
         <text x={baciX - PADDING_H * 0.6} y={baciY + centrosFileiras.yF0}
@@ -317,28 +323,28 @@ function BaciaVisual({
           fill="#1a1a1a" fontWeight="bold">+</text>
       </g>
       {/* Fileira 0 — direita */}
-      <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
+      <g onClick={() => onAdicionarTanque(0)} style={{ cursor: "pointer" }}>
         <circle cx={baciX + L_m + PADDING_H * 0.6} cy={baciY + centrosFileiras.yF0}
           r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
         <text x={baciX + L_m + PADDING_H * 0.6} y={baciY + centrosFileiras.yF0}
           fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
           fill="#1a1a1a" fontWeight="bold">+</text>
       </g>
-      {/* Fileira 1 — esquerda (sempre visível para permitir adicionar na 2ª fileira) */}
-      <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
+      {/* Fileira 1 — esquerda */}
+      <g onClick={() => onAdicionarTanque(1)} style={{ cursor: "pointer" }}>
         <circle cx={baciX - PADDING_H * 0.6} cy={baciY + centrosFileiras.yF1}
-          r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
+          r={0.55} fill="#16a34a" stroke="white" strokeWidth="0.07" />
         <text x={baciX - PADDING_H * 0.6} y={baciY + centrosFileiras.yF1}
           fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
-          fill="#1a1a1a" fontWeight="bold">+</text>
+          fill="white" fontWeight="bold">+</text>
       </g>
       {/* Fileira 1 — direita */}
-      <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
+      <g onClick={() => onAdicionarTanque(1)} style={{ cursor: "pointer" }}>
         <circle cx={baciX + L_m + PADDING_H * 0.6} cy={baciY + centrosFileiras.yF1}
-          r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
+          r={0.55} fill="#16a34a" stroke="white" strokeWidth="0.07" />
         <text x={baciX + L_m + PADDING_H * 0.6} y={baciY + centrosFileiras.yF1}
           fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
-          fill="#1a1a1a" fontWeight="bold">+</text>
+          fill="white" fontWeight="bold">+</text>
       </g>
 
       {/* Legenda */}
@@ -374,9 +380,10 @@ interface ModalTanqueProps {
   onConfirmar: (t: TanqueBacia) => void;
   onCancelar: () => void;
   totalTanques: number;
+  targetFileira: 0 | 1;
 }
 
-function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTanqueProps) {
+function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques, targetFileira }: ModalTanqueProps) {
   const [tag, setTag] = useState(`TQ-${String(totalTanques + 1).padStart(2, "0")}`);
   const [D, setD] = useState(10);
   const [H, setH] = useState(10);
@@ -384,11 +391,20 @@ function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTa
   const [dAnel, setDAnel] = useState<number | undefined>(undefined);
 
   const volume = (Math.PI / 4) * D * D * H;
+  const labelFileira = targetFileira === 0 ? "fileira superior" : "fileira inferior";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl space-y-4">
-        <h3 className="font-title text-xl font-bold">Adicionar tanque</h3>
+        <div>
+          <h3 className="font-title text-xl font-bold">Adicionar tanque</h3>
+          <p className="text-xs text-carbono-500 mt-0.5">
+            Será adicionado na{" "}
+            <span className={`font-semibold ${targetFileira === 0 ? "text-verde" : "text-green-700"}`}>
+              {labelFileira}
+            </span>
+          </p>
+        </div>
         <div className="grid gap-4">
           <TextField label="TAG" value={tag} onChange={setTag} placeholder="Ex.: TQ-01" />
           <NumberField
@@ -448,6 +464,7 @@ function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTa
                   volume_m3: volume,
                   alturaAnel_m: alturaAnel,
                   diametroAnel_m: dAnel && dAnel > D ? dAnel : undefined,
+                  fileira: targetFileira,
                 }),
               )
             }
@@ -492,7 +509,8 @@ export default function BaciaCalculadoraPage({
 }) {
   const { id } = use(params);
   const { estado, atualizar } = useBaciaProjeto(id);
-  const [modalAberto, setModalAberto] = useState(false);
+  /** null = fechado | 0 = aberto para fileira superior | 1 = aberto para fileira inferior */
+  const [modalFileira, setModalFileira] = useState<0 | 1 | null>(null);
   const [gerando, setGerando] = useState(false);
 
   const resultado = useMemo(() => {
@@ -604,7 +622,7 @@ export default function BaciaCalculadoraPage({
 
   function adicionarTanque(t: TanqueBacia) {
     atualizar((p) => ({ ...p, tanques: [...p.tanques, t] }));
-    setModalAberto(false);
+    setModalFileira(null);
   }
 
   function removerTanque(tid: string) {
@@ -804,7 +822,7 @@ export default function BaciaCalculadoraPage({
             </table>
           </div>
         )}
-        <Button size="sm" variant="secondary" onClick={() => setModalAberto(true)}>
+        <Button size="sm" variant="secondary" onClick={() => setModalFileira(0)}>
           + Adicionar tanque
         </Button>
       </Card>
@@ -1060,7 +1078,7 @@ export default function BaciaCalculadoraPage({
               posicoes={posicoesTanques}
               L_m={Math.max(svgL, 5)}
               W_m={Math.max(svgW, 5)}
-              onAdicionarTanque={() => setModalAberto(true)}
+              onAdicionarTanque={(f) => setModalFileira(f)}
               onRemoverTanque={removerTanque}
             />
           </Card>
@@ -1261,11 +1279,12 @@ export default function BaciaCalculadoraPage({
       </Card>
 
       {/* Modal de adicionar tanque */}
-      {modalAberto && (
+      {modalFileira !== null && (
         <ModalAdicionarTanque
           totalTanques={projeto.tanques.length}
+          targetFileira={modalFileira}
           onConfirmar={adicionarTanque}
-          onCancelar={() => setModalAberto(false)}
+          onCancelar={() => setModalFileira(null)}
         />
       )}
     </div>
