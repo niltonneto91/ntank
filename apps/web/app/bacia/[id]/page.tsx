@@ -525,12 +525,14 @@ export default function BaciaCalculadoraPage({
       totalVolumeMuretas(p.muretasIntermediarias ?? []);
 
     if (p.modo === "verificar" && p.baciaDims) {
+      const formatoLivre = p.baciaDims.formatoBacia === "livre";
       return {
         tipo: "verificar" as const,
         data: verificarBacia({
           tanques: p.tanques,
-          comprimento_m: p.baciaDims.comprimento_m,
-          largura_m: p.baciaDims.largura_m,
+          ...(formatoLivre
+            ? { area_m2: p.baciaDims.area_m2 ?? 0 }
+            : { comprimento_m: p.baciaDims.comprimento_m, largura_m: p.baciaDims.largura_m }),
           alturaTotal_m: p.baciaDims.alturaTotal_m,
           freeboard_m: p.freeboard_m,
           V_deslocamentos_outros_m3: V_desl,
@@ -598,15 +600,21 @@ export default function BaciaCalculadoraPage({
   const { projeto } = estado;
 
   // Dimensões SVG
+  const formatoBaciaLivre = projeto.modo === "verificar" && projeto.baciaDims?.formatoBacia === "livre";
+  const areaSvgLivre = projeto.baciaDims?.area_m2 ?? 100;
   const svgL =
     projeto.modo === "verificar" && projeto.baciaDims
-      ? projeto.baciaDims.comprimento_m
+      ? (formatoBaciaLivre
+          ? Math.sqrt(areaSvgLivre * 1.5)   // L/W ≈ 1.5 como aproximação visual
+          : projeto.baciaDims.comprimento_m)
       : resultado?.tipo === "dimensionar"
         ? (resultado.data as ResultadoDimensionarBacia).comprimentoSugerido_m || 20
         : 20;
   const svgW =
     projeto.modo === "verificar" && projeto.baciaDims
-      ? projeto.baciaDims.largura_m
+      ? (formatoBaciaLivre
+          ? areaSvgLivre / Math.max(Math.sqrt(areaSvgLivre * 1.5), 0.1)
+          : projeto.baciaDims.largura_m)
       : resultado?.tipo === "dimensionar"
         ? (resultado.data as ResultadoDimensionarBacia).larguraSugerida_m || 15
         : 15;
@@ -887,38 +895,7 @@ export default function BaciaCalculadoraPage({
           {/* Campos da bacia existente */}
           {projeto.modo === "verificar" && (
             <>
-              <NumberField
-                label="Comprimento interno (L)"
-                unit="m"
-                value={projeto.baciaDims?.comprimento_m ?? 0}
-                onChange={(v) =>
-                  atualizar((p) => ({
-                    ...p,
-                    baciaDims: {
-                      ...(p.baciaDims ?? { comprimento_m: 0, largura_m: 0, alturaTotal_m: 2.0 }),
-                      comprimento_m: v ?? 0,
-                    },
-                  }))
-                }
-                min={1}
-                step={0.1}
-              />
-              <NumberField
-                label="Largura interna (W)"
-                unit="m"
-                value={projeto.baciaDims?.largura_m ?? 0}
-                onChange={(v) =>
-                  atualizar((p) => ({
-                    ...p,
-                    baciaDims: {
-                      ...(p.baciaDims ?? { comprimento_m: 0, largura_m: 0, alturaTotal_m: 2.0 }),
-                      largura_m: v ?? 0,
-                    },
-                  }))
-                }
-                min={1}
-                step={0.1}
-              />
+              {/* Altura do muro — sempre visível no modo verificar */}
               <NumberField
                 label="Altura total do muro"
                 unit="m"
@@ -941,6 +918,91 @@ export default function BaciaCalculadoraPage({
             </>
           )}
         </div>
+
+        {/* Formato da planta — somente modo verificar */}
+        {projeto.modo === "verificar" && (
+          <div className="mt-4 rounded-lg border border-carbono-200 p-4">
+            <p className="text-sm font-semibold text-carbono-700 mb-3">Formato da planta da bacia</p>
+            <div className="flex gap-2 mb-4">
+              {(["retangular", "livre"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() =>
+                    atualizar((p) => ({
+                      ...p,
+                      baciaDims: {
+                        ...(p.baciaDims ?? { comprimento_m: 0, largura_m: 0, alturaTotal_m: 2.0 }),
+                        formatoBacia: f,
+                      },
+                    }))
+                  }
+                  className={`flex-1 rounded-lg border-2 py-2 px-3 text-sm font-semibold transition ${
+                    (projeto.baciaDims?.formatoBacia ?? "retangular") === f
+                      ? "border-verde bg-verde/10 text-carbono"
+                      : "border-carbono-200 text-carbono-500 hover:border-carbono-400"
+                  }`}
+                >
+                  {f === "retangular" ? "⬜ Retangular (L × W)" : "⬠ Área livre (forma irregular)"}
+                </button>
+              ))}
+            </div>
+
+            {(projeto.baciaDims?.formatoBacia ?? "retangular") === "retangular" ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <NumberField
+                  label="Comprimento interno (L)"
+                  unit="m"
+                  value={projeto.baciaDims?.comprimento_m ?? 0}
+                  onChange={(v) =>
+                    atualizar((p) => ({
+                      ...p,
+                      baciaDims: {
+                        ...(p.baciaDims ?? { comprimento_m: 0, largura_m: 0, alturaTotal_m: 2.0 }),
+                        comprimento_m: v ?? 0,
+                      },
+                    }))
+                  }
+                  min={1}
+                  step={0.1}
+                />
+                <NumberField
+                  label="Largura interna (W)"
+                  unit="m"
+                  value={projeto.baciaDims?.largura_m ?? 0}
+                  onChange={(v) =>
+                    atualizar((p) => ({
+                      ...p,
+                      baciaDims: {
+                        ...(p.baciaDims ?? { comprimento_m: 0, largura_m: 0, alturaTotal_m: 2.0 }),
+                        largura_m: v ?? 0,
+                      },
+                    }))
+                  }
+                  min={1}
+                  step={0.1}
+                />
+              </div>
+            ) : (
+              <NumberField
+                label="Área interna disponível"
+                unit="m²"
+                value={projeto.baciaDims?.area_m2 ?? 0}
+                onChange={(v) =>
+                  atualizar((p) => ({
+                    ...p,
+                    baciaDims: {
+                      ...(p.baciaDims ?? { comprimento_m: 0, largura_m: 0, alturaTotal_m: 2.0 }),
+                      area_m2: v ?? 0,
+                    },
+                  }))
+                }
+                min={1}
+                step={1}
+                hint="Área real da planta interna da bacia, independente do formato (L, T, arredondada…)"
+              />
+            )}
+          </div>
+        )}
 
         {/* Muretas intermediárias */}
         <div className="mt-5 border-t border-carbono-100 pt-4">
@@ -1076,6 +1138,15 @@ export default function BaciaCalculadoraPage({
               <strong className="text-verde">+</strong> para adicionar tanques ou em{" "}
               <strong>×</strong> para remover.
             </p>
+            {formatoBaciaLivre && (
+              <div className="mb-2 flex items-center gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                <span>⚠</span>
+                <span>
+                  <strong>Forma irregular</strong> — layout aproximado (retângulo equivalente com mesma área).
+                  As dimensões L × W exibidas são apenas uma estimativa visual.
+                </span>
+              </div>
+            )}
             <BaciaVisual
               tanques={projeto.tanques}
               posicoes={posicoesTanques}
@@ -1105,7 +1176,7 @@ export default function BaciaCalculadoraPage({
                         <div>
                           <p className="text-carbono-500 text-xs uppercase tracking-wider">Volume disponível</p>
                           <p className="font-mono text-lg font-bold">{fmtVol(d.volumeDisponivel_m3)} m³</p>
-                          <p className="text-xs text-carbono-400">L×W×h_efetiva − deslocamentos</p>
+                          <p className="text-xs text-carbono-400">{formatoBaciaLivre ? "A_interna" : "L×W"}×h_efetiva − deslocamentos</p>
                         </div>
                         <div>
                           <p className="text-carbono-500 text-xs uppercase tracking-wider">Altura efetiva</p>
@@ -1149,7 +1220,14 @@ export default function BaciaCalculadoraPage({
                         <div className="mt-3 space-y-1 font-mono text-carbono-700">
                           <p>V_req = volume do maior tanque vertical = {fmtVol(d.volumeRequerido_m3)} m³</p>
                           <p>h_efetiva = h_total − freeboard = {fmt2(d.alturaEfetiva_m + d.freeboard_m)} − {fmt2(d.freeboard_m)} = {fmt2(d.alturaEfetiva_m)} m</p>
-                          <p>V_bruto  = L × W × h_efetiva = {projeto.baciaDims?.comprimento_m.toFixed(2)} × {projeto.baciaDims?.largura_m.toFixed(2)} × {fmt2(d.alturaEfetiva_m)} = {fmt2((projeto.baciaDims?.comprimento_m ?? 0) * (projeto.baciaDims?.largura_m ?? 0) * d.alturaEfetiva_m)} m³</p>
+                          {formatoBaciaLivre ? (
+                            <>
+                              <p>A_interna = {fmt2(d.areaInterna_m2)} m²  (área informada — formato irregular)</p>
+                              <p>V_bruto  = A_interna × h_efetiva = {fmt2(d.areaInterna_m2)} × {fmt2(d.alturaEfetiva_m)} = {fmt2(d.areaInterna_m2 * d.alturaEfetiva_m)} m³</p>
+                            </>
+                          ) : (
+                            <p>V_bruto  = L × W × h_efetiva = {projeto.baciaDims?.comprimento_m.toFixed(2)} × {projeto.baciaDims?.largura_m.toFixed(2)} × {fmt2(d.alturaEfetiva_m)} = {fmt2(d.areaInterna_m2 * d.alturaEfetiva_m)} m³</p>
+                          )}
                           <p className="mt-1">─── Deslocamentos internos (NBR 17505-2 §5.9.2.2.1) ───</p>
                           <p>− V_desl_bases  (anéis, todos os {projeto.tanques.length} tanques) = {fmt2(d.deslocamentos.V_desl_bases_m3)} m³</p>
                           <p>− V_desl_corpos (corpos, {projeto.tanques.length - 1} não-maiores) = {fmt2(d.deslocamentos.V_desl_corpos_m3)} m³</p>

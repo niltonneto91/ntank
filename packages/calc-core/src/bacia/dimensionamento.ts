@@ -176,6 +176,26 @@ export function verificarBacia(
   const alertas: AlertaBacia[] = [];
   const fb = Math.max(entrada.freeboard_m ?? FREEBOARD_MINIMO_M, FREEBOARD_MINIMO_M);
 
+  // -----------------------------------------------------------------------
+  // Resolver área efetiva — aceita area_m2 direto OU comprimento × largura
+  // Para bacias irregulares (modo "livre"), o usuário informa a área total
+  // interna independente da planta (L, T, arredondada etc.).
+  // -----------------------------------------------------------------------
+  const areaInterna: number =
+    entrada.area_m2 != null
+      ? entrada.area_m2
+      : (entrada.comprimento_m ?? 0) * (entrada.largura_m ?? 0);
+
+  // Derivar L/W equivalentes para funções que recebem dois eixos.
+  // Como calcularVolumeDisponivel usa apenas L×W (não os eixos separadamente),
+  // qualquer decomposição com produto = areaInterna produz resultado correto.
+  const L_ef = entrada.comprimento_m != null
+    ? entrada.comprimento_m
+    : Math.sqrt(areaInterna * 1.5);      // razão L/W ≈ 1.5 para layout SVG
+  const W_ef = entrada.largura_m != null
+    ? entrada.largura_m
+    : (L_ef > 0 ? areaInterna / L_ef : 0);
+
   const alturaExcedeMuro = entrada.alturaTotal_m > ALTURA_MAX_DIQUE_M;
   if (alturaExcedeMuro) {
     alertas.push({
@@ -206,8 +226,8 @@ export function verificarBacia(
 
   const volumeDisponivel = round2(
     calcularVolumeDisponivel(
-      entrada.comprimento_m,
-      entrada.largura_m,
+      L_ef,
+      W_ef,
       entrada.tanques,
       entrada.alturaTotal_m,
       fb,
@@ -258,11 +278,7 @@ export function verificarBacia(
   }
 
   const distanciamentos = calcularDistanciamentos(entrada.tanques);
-  const posicoesTanques = calcularPosicoesTanques(
-    entrada.tanques,
-    entrada.comprimento_m,
-    entrada.largura_m,
-  );
+  const posicoesTanques = calcularPosicoesTanques(entrada.tanques, L_ef, W_ef);
 
   return {
     volumeRequerido_m3: volumeRequerido,
@@ -273,6 +289,7 @@ export function verificarBacia(
     aprovado,
     utilizacao_pct,
     alturaExcedeMuro,
+    areaInterna_m2: round2(areaInterna),
     distanciamentos,
     posicoesTanques,
     alertas,

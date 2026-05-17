@@ -131,10 +131,24 @@ export interface DetalhamentoDeslocamentos {
 export interface EntradaVerificarBacia {
   /** Lista de tanques contidos na bacia */
   tanques: TanqueBacia[];
-  /** Dimensão interna — comprimento (L) da bacia [m] */
-  comprimento_m: number;
-  /** Dimensão interna — largura (W) da bacia [m] */
-  largura_m: number;
+  /**
+   * Dimensão interna — comprimento (L) da bacia [m].
+   * Obrigatório quando `area_m2` não for informado (bacia retangular).
+   */
+  comprimento_m?: number;
+  /**
+   * Dimensão interna — largura (W) da bacia [m].
+   * Obrigatório quando `area_m2` não for informado (bacia retangular).
+   */
+  largura_m?: number;
+  /**
+   * Área interna disponível [m²] — use para bacias de formato irregular
+   * (L, T, bordas arredondadas, recortes etc.).
+   * Substitui `comprimento_m × largura_m` no cálculo de volume.
+   * Quando informado, `comprimento_m` e `largura_m` são ignorados para o volume
+   * e usados apenas para a visualização geométrica SVG (se disponíveis).
+   */
+  area_m2?: number;
   /**
    * Altura total do dique, medida internamente [m].
    * Limite: 3,0 m (§5.9.2.2). Inclui a sobrealtura de 0,20 m.
@@ -160,7 +174,7 @@ export interface ResultadoVerificarBacia {
   volumeRequerido_m3: number;
   /**
    * Volume líquido disponível da bacia [m³]:
-   *   = L × W × h_efetiva − V_desl_bases − V_desl_corpos − V_desl_outros
+   *   = A_interna × h_efetiva − V_desl_bases − V_desl_corpos − V_desl_outros
    */
   volumeDisponivel_m3: number;
   /** Altura efetiva para contenção: alturaTotal − freeboard [m] */
@@ -175,6 +189,11 @@ export interface ResultadoVerificarBacia {
   utilizacao_pct: number;
   /** A altura total do dique excede 3,0 m (§5.9.2.2)? */
   alturaExcedeMuro: boolean;
+  /**
+   * Área interna efetiva utilizada no cálculo [m²].
+   * = comprimento_m × largura_m (bacia retangular) ou area_m2 (forma irregular).
+   */
+  areaInterna_m2: number;
   /** Distanciamentos mínimos calculados */
   distanciamentos: DistanciamentoTanque[];
   /** Posições geométricas dos tanques no plano da bacia (para SVG) */

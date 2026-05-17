@@ -47,10 +47,21 @@ export function totalVolumeMuretas(muretas: MuretaIntermediaria[]): number {
 // ---------------------------------------------------------------------------
 
 export interface DimensoesBaciaExistente {
-  /** Comprimento interno da bacia [m] */
+  /**
+   * Formato da planta da bacia.
+   * - `"retangular"` (default): usa `comprimento_m × largura_m`.
+   * - `"livre"`: usa `area_m2` diretamente (para bacias em L, T, arredondadas etc.).
+   */
+  formatoBacia?: "retangular" | "livre";
+  /** Comprimento interno da bacia [m] — usado quando formatoBacia = "retangular" */
   comprimento_m: number;
-  /** Largura interna da bacia [m] */
+  /** Largura interna da bacia [m] — usado quando formatoBacia = "retangular" */
   largura_m: number;
+  /**
+   * Área interna disponível [m²] — usado quando formatoBacia = "livre".
+   * Representa a área real da planta, independente do formato.
+   */
+  area_m2?: number;
   /** Altura total do dique, medida internamente [m] */
   alturaTotal_m: number;
 }
