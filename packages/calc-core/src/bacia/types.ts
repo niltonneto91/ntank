@@ -40,6 +40,12 @@ export interface TanqueBacia {
    * Documentado na memória de cálculo; não altera o cálculo de volume §5.9.2.2.1.
    */
   alturaAnel_m?: number;
+  /**
+   * Diâmetro externo da base de fundação (anel de concreto) [m].
+   * Quando informado e > D_m, é usado no cálculo da área de base descontada da bacia.
+   * Tipicamente 0,5 m a 1,0 m maior que D_m (depende do projeto civil).
+   */
+  diametroAnel_m?: number;
 }
 
 // ---------------------------------------------------------------------------

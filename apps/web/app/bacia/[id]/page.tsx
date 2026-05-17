@@ -75,13 +75,13 @@ function BaciaVisual({
     return map;
   }, [posicoes, tanques, L_m, W_m]);
 
-  // Calcular centros de fileira para os botões "+"
+  // Calcular centros de fileira para os botões "+" — sempre 4 botões
   const centrosFileiras = useMemo(() => {
     const f0 = posicoes.filter((p) => p.fileira === 0);
     const f1 = posicoes.filter((p) => p.fileira === 1);
-    const yF0 = f0.length > 0 ? (f0[0]!.cy_m) : W_m / 4;
-    const yF1 = f1.length > 0 ? (f1[0]!.cy_m) : (3 * W_m) / 4;
-    return { yF0, yF1, hasF1: f1.length > 0 || posicoes.length > 3 };
+    const yF0 = f0.length > 0 ? f0[0]!.cy_m : W_m / 4;
+    const yF1 = f1.length > 0 ? f1[0]!.cy_m : (3 * W_m) / 4;
+    return { yF0, yF1 };
   }, [posicoes, W_m]);
 
   const ARROW_SIZE = 0.15;
@@ -104,12 +104,23 @@ function BaciaVisual({
         >
           <line x1="0" y1="0" x2="0" y2="0.4" stroke="#94a3b8" strokeWidth="0.08" />
         </pattern>
-        {/* Marcador de seta para cotas */}
-        <marker id="seta" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
-          <path d="M0,0 L4,2 L0,4 Z" fill="#f59e0b" />
+        {/* Marcadores de seta — userSpaceOnUse garante tamanho absoluto em metros */}
+        <marker id="seta" markerWidth="0.6" markerHeight="0.5" refX="0.55" refY="0.25"
+          orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L0.6,0.25 L0,0.5 Z" fill="#f59e0b" />
         </marker>
-        <marker id="seta-inv" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto-start-reverse">
-          <path d="M0,0 L4,2 L0,4 Z" fill="#f59e0b" />
+        <marker id="seta-inv" markerWidth="0.6" markerHeight="0.5" refX="0.05" refY="0.25"
+          orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0.6,0 L0,0.25 L0.6,0.5 Z" fill="#f59e0b" />
+        </marker>
+        {/* Setas cinza para cotas de comprimento/largura da bacia */}
+        <marker id="seta-cinza" markerWidth="0.6" markerHeight="0.5" refX="0.55" refY="0.25"
+          orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0,0 L0.6,0.25 L0,0.5 Z" fill="#64748b" />
+        </marker>
+        <marker id="seta-cinza-inv" markerWidth="0.6" markerHeight="0.5" refX="0.05" refY="0.25"
+          orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M0.6,0 L0,0.25 L0.6,0.5 Z" fill="#64748b" />
         </marker>
       </defs>
 
@@ -128,18 +139,18 @@ function BaciaVisual({
       <rect x={baciX} y={baciY} width={L_m} height={W_m} fill="#f0fdf4" stroke="none" />
 
       {/* ─── Cota de comprimento (topo) ─── */}
-      <g stroke="#64748b" fill="#64748b">
+      <g stroke="#64748b">
         <line x1={baciX} y1={baciY - 0.8} x2={baciX + L_m} y2={baciY - 0.8} strokeWidth="0.05"
-          markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
+          markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
         <text x={baciX + L_m / 2} y={baciY - 1.0} fontSize="0.38" textAnchor="middle"
           fontFamily="monospace" fontWeight="bold" fill="#334155">
           {L_m.toFixed(1)} m
         </text>
       </g>
       {/* ─── Cota de largura (esquerda) ─── */}
-      <g stroke="#64748b" fill="#64748b">
+      <g stroke="#64748b">
         <line x1={baciX - 0.8} y1={baciY} x2={baciX - 0.8} y2={baciY + W_m} strokeWidth="0.05"
-          markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
+          markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
         <text x={baciX - 1.3} y={baciY + W_m / 2} fontSize="0.38" textAnchor="middle"
           fontFamily="monospace" fontWeight="bold" fill="#334155"
           transform={`rotate(-90, ${baciX - 1.3}, ${baciY + W_m / 2})`}>
@@ -175,7 +186,9 @@ function BaciaVisual({
 
         // Cota ao muro esquerdo (apenas tanque mais à esquerda da fileira)
         const isLeftmost = idxFileira === 0;
-        // Cota ao muro superior/inferior (apenas se 1ª ou última fileira de cada lado)
+        // Cota ao muro direito (apenas tanque mais à direita da fileira)
+        const isRightmost = idxFileira === mesmaFileira.length - 1;
+        // Cota ao muro superior/inferior
         const isRow0 = pos.fileira === 0;
         const isRow1 = pos.fileira === 1;
         const dMinMuro = distMinTanqueMuro(tanque.D_m);
@@ -256,6 +269,22 @@ function BaciaVisual({
               </g>
             )}
 
+            {/* Cota: tanque mais à direita → muro direito */}
+            {isRightmost && (
+              <g stroke="#f59e0b" fill="#f59e0b" strokeWidth="0.04">
+                <line
+                  x1={svgCx + R} y1={svgCy}
+                  x2={baciX + L_m} y2={svgCy}
+                  strokeDasharray="0.18 0.08"
+                  markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
+                <text
+                  x={(svgCx + R + baciX + L_m) / 2} y={svgCy - 0.18}
+                  fontSize="0.24" textAnchor="middle" fontFamily="monospace">
+                  {distMinTanqueMuro(tanque.D_m).toFixed(2)}m
+                </text>
+              </g>
+            )}
+
             {/* Cota entre tanques adjacentes */}
             {cotaEntreProximo && (
               <g stroke="#f59e0b" fill="#f59e0b" strokeWidth="0.04">
@@ -295,26 +324,22 @@ function BaciaVisual({
           fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
           fill="#1a1a1a" fontWeight="bold">+</text>
       </g>
-      {/* Fileira 1 — esquerda (só se há ou poderá haver 2ª fileira) */}
-      {centrosFileiras.hasF1 && (
-        <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
-          <circle cx={baciX - PADDING_H * 0.6} cy={baciY + centrosFileiras.yF1}
-            r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
-          <text x={baciX - PADDING_H * 0.6} y={baciY + centrosFileiras.yF1}
-            fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
-            fill="#1a1a1a" fontWeight="bold">+</text>
-        </g>
-      )}
+      {/* Fileira 1 — esquerda (sempre visível para permitir adicionar na 2ª fileira) */}
+      <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
+        <circle cx={baciX - PADDING_H * 0.6} cy={baciY + centrosFileiras.yF1}
+          r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
+        <text x={baciX - PADDING_H * 0.6} y={baciY + centrosFileiras.yF1}
+          fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
+          fill="#1a1a1a" fontWeight="bold">+</text>
+      </g>
       {/* Fileira 1 — direita */}
-      {centrosFileiras.hasF1 && (
-        <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
-          <circle cx={baciX + L_m + PADDING_H * 0.6} cy={baciY + centrosFileiras.yF1}
-            r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
-          <text x={baciX + L_m + PADDING_H * 0.6} y={baciY + centrosFileiras.yF1}
-            fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
-            fill="#1a1a1a" fontWeight="bold">+</text>
-        </g>
-      )}
+      <g onClick={onAdicionarTanque} style={{ cursor: "pointer" }}>
+        <circle cx={baciX + L_m + PADDING_H * 0.6} cy={baciY + centrosFileiras.yF1}
+          r={0.55} fill="#ADD91C" stroke="white" strokeWidth="0.07" />
+        <text x={baciX + L_m + PADDING_H * 0.6} y={baciY + centrosFileiras.yF1}
+          fontSize="0.65" textAnchor="middle" dominantBaseline="middle"
+          fill="#1a1a1a" fontWeight="bold">+</text>
+      </g>
 
       {/* Legenda */}
       <g>
@@ -356,6 +381,7 @@ function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTa
   const [D, setD] = useState(10);
   const [H, setH] = useState(10);
   const [alturaAnel, setAlturaAnel] = useState(0);
+  const [dAnel, setDAnel] = useState<number | undefined>(undefined);
 
   const volume = (Math.PI / 4) * D * D * H;
 
@@ -366,7 +392,7 @@ function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTa
         <div className="grid gap-4">
           <TextField label="TAG" value={tag} onChange={setTag} placeholder="Ex.: TQ-01" />
           <NumberField
-            label="Diâmetro externo"
+            label="Diâmetro externo do tanque"
             unit="m"
             value={D}
             onChange={(v) => setD(v ?? 10)}
@@ -381,15 +407,31 @@ function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTa
             min={0.1}
             step={0.1}
           />
-          <NumberField
-            label="Altura do anel de fundação"
-            unit="m"
-            value={alturaAnel}
-            onChange={(v) => setAlturaAnel(v ?? 0)}
-            min={0}
-            step={0.05}
-            hint="Base de concreto/areia acima do piso da bacia"
-          />
+          <div className="border-t border-carbono-100 pt-3">
+            <p className="text-xs font-semibold text-carbono-500 uppercase tracking-wider mb-3">
+              Anel de fundação (base de concreto)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <NumberField
+                label="Diâmetro da base"
+                unit="m"
+                value={dAnel ?? D}
+                onChange={(v) => setDAnel(v && v > D ? v : undefined)}
+                min={D}
+                step={0.1}
+                hint="Se > diâmetro do tanque"
+              />
+              <NumberField
+                label="Altura da base"
+                unit="m"
+                value={alturaAnel}
+                onChange={(v) => setAlturaAnel(v ?? 0)}
+                min={0}
+                step={0.05}
+                hint="Acima do piso da bacia"
+              />
+            </div>
+          </div>
           <p className="text-sm text-carbono-600">
             Volume: <strong>{volume.toFixed(1)} m³</strong>{" "}
             <span className="text-xs text-carbono-400">(π/4 × D² × H)</span>
@@ -399,7 +441,14 @@ function ModalAdicionarTanque({ onConfirmar, onCancelar, totalTanques }: ModalTa
           <Button
             onClick={() =>
               onConfirmar(
-                criarTanqueBacia({ tag, D_m: D, H_m: H, volume_m3: volume, alturaAnel_m: alturaAnel }),
+                criarTanqueBacia({
+                  tag,
+                  D_m: D,
+                  H_m: H,
+                  volume_m3: volume,
+                  alturaAnel_m: alturaAnel,
+                  diametroAnel_m: dAnel && dAnel > D ? dAnel : undefined,
+                }),
               )
             }
           >
@@ -653,7 +702,8 @@ export default function BaciaCalculadoraPage({
                   <th className="py-2 pr-3 text-left font-medium">TAG</th>
                   <th className="py-2 pr-3 text-right font-medium">D (m)</th>
                   <th className="py-2 pr-3 text-right font-medium">H (m)</th>
-                  <th className="py-2 pr-3 text-right font-medium">H.Anel (m)</th>
+                  <th className="py-2 pr-3 text-right font-medium">D.Base (m)</th>
+                  <th className="py-2 pr-3 text-right font-medium">H.Base (m)</th>
                   <th className="py-2 pr-3 text-right font-medium">Volume (m³)</th>
                   <th className="py-2 pr-3 text-right font-medium">d min → muro</th>
                   <th className="py-2 text-right font-medium"></th>
@@ -697,6 +747,20 @@ export default function BaciaCalculadoraPage({
                     <td className="py-2 pr-3">
                       <input
                         type="number"
+                        value={t.diametroAnel_m ?? ""}
+                        placeholder={t.D_m.toFixed(1)}
+                        step={0.1}
+                        min={t.D_m}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          atualizarTanque(t.id, { diametroAnel_m: v > t.D_m ? v : undefined });
+                        }}
+                        className="w-20 rounded border border-carbono-200 bg-white px-2 py-1 text-sm font-mono text-right outline-none focus:border-verde"
+                      />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <input
+                        type="number"
                         value={t.alturaAnel_m ?? 0}
                         step={0.05}
                         min={0}
@@ -729,7 +793,7 @@ export default function BaciaCalculadoraPage({
                     <td className="py-2 pr-3 text-xs uppercase tracking-wider">
                       {projeto.tanques.length} tanque{projeto.tanques.length !== 1 ? "s" : ""}
                     </td>
-                    <td colSpan={3} />
+                    <td colSpan={4} />
                     <td className="py-2 pr-3 text-right font-mono">
                       {projeto.tanques.reduce((s, t) => s + t.volume_m3, 0).toFixed(1)} m³
                     </td>
@@ -1109,10 +1173,16 @@ export default function BaciaCalculadoraPage({
                           <p className="text-xs text-carbono-400">V_req / h_efetiva</p>
                         </div>
                       </div>
+                      {d.alertas.some((a) => a.code === "B007") && !d.alturaExcedeLimite && (
+                        <div className="rounded bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-900">
+                          ⚠️ Dimensões ajustadas automaticamente para respeitar h_parede ≤ {ALTURA_MAX_DIQUE_M.toFixed(1)} m.
+                          Veja o alerta acima para detalhes do comprimento adotado.
+                        </div>
+                      )}
                       {d.alturaExcedeLimite && (
                         <div className="rounded bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">
-                          A altura calculada ({fmt2(d.alturaParede_m)} m) excede {ALTURA_MAX_DIQUE_M.toFixed(1)} m.
-                          O comprimento foi expandido automaticamente.
+                          ❌ Mesmo após expansão, h_parede ({fmt2(d.alturaParede_m)} m) excede {ALTURA_MAX_DIQUE_M.toFixed(1)} m.
+                          Reduza os tanques ou ajuste os parâmetros manualmente.
                         </div>
                       )}
                       {totalVolMuretas > 0 && (

@@ -364,27 +364,33 @@ export function dimensionarBacia(
   let alturaExcedeLimite = h_parede > alturaMaxMuro;
 
   // -----------------------------------------------------------------------
-  // Passo 5: Se h excede limite, expandir L proporcionalmente
+  // Passo 5: Se h excede limite, expandir L diretamente pela fórmula correta
+  //
+  // Alvo: L × W − A_bases ≥ A_liq_necessaria
+  //   → L ≥ (A_liq_necessaria + A_bases) / W
+  //
+  // (O antigo sqrt(A_liq_needed/A_liq_current) × L era incorreto porque
+  //  não contabiliza o termo −A_bases, causando subestimação de L.)
   // -----------------------------------------------------------------------
   if (alturaExcedeLimite) {
+    const L_original = L;
     const h_efetiva_disponivel = round2(alturaMaxMuro - fb);
     const areaLiquidaNecessaria = round2((volumeRequerido + V_desl) / h_efetiva_disponivel);
-    const fator = Math.sqrt(areaLiquidaNecessaria / areaLiquidaAtual);
-    L = ceilDecim1(L * fator);
+    // Solução direta: L_min = (A_liq_necessaria + A_bases) / W  (arredondado para cima)
+    L = ceilDecim1((areaLiquidaNecessaria + areaBasesTanques) / W);
     // Recalcular com L expandido
     areaLiquidaAtual = Math.max(L * W - areaBasesTanques, 0.001);
     h_efetiva_required = round2((volumeRequerido + V_desl) / areaLiquidaAtual);
     h_parede = round2(h_efetiva_required + fb);
-    alturaExcedeLimite = h_parede > alturaMaxMuro;
+    alturaExcedeLimite = h_parede > alturaMaxMuro + 0.005; // tolerância de arredondamento
 
     alertas.push({
       code: "B007",
-      nivel: "CRITICO",
+      nivel: "ALERTA",
       mensagem:
-        `A altura calculada da parede do dique (${h_parede.toFixed(2)} m) excede ` +
-        `o máximo de ${alturaMaxMuro.toFixed(1)} m. ` +
-        `O comprimento da bacia foi expandido para L = ${L.toFixed(1)} m. ` +
-        "Se ainda exceder, reduza o volume dos tanques ou aumente a relação L/W manualmente.",
+        `Comprimento expandido automaticamente de ${L_original.toFixed(1)} m para ` +
+        `${L.toFixed(1)} m para respeitar a altura máxima de ${alturaMaxMuro.toFixed(1)} m ` +
+        `(NBR 17505-2 §5.9.2.2). Altura da parede adotada: ${h_parede.toFixed(2)} m.`,
     });
   }
 

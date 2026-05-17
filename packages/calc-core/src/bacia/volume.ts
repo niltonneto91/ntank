@@ -22,10 +22,15 @@ export const FREEBOARD_MINIMO_M = 0.20;
 export const ALTURA_MAX_DIQUE_M = 3.0;
 
 /**
- * Área da base circular de um tanque = π/4 × D² [m²].
+ * Área da base circular de um tanque [m²].
+ *
+ * Usa o diâmetro do anel de fundação (base de concreto) quando informado e > D_m,
+ * pois a fundação desloca mais área que o costado do tanque.
+ * Caso contrário usa D_m (diâmetro do costado).
  */
-export function areaBaseTanque(D_m: number): number {
-  return (Math.PI / 4) * D_m * D_m;
+export function areaBaseTanque(D_m: number, diametroAnel_m?: number): number {
+  const D = diametroAnel_m && diametroAnel_m > D_m ? diametroAnel_m : D_m;
+  return (Math.PI / 4) * D * D;
 }
 
 /**
@@ -76,7 +81,7 @@ export function calcularVolumeRequerido(tanques: TanqueBacia[]): number {
  * Esse valor é descontado da área interna da bacia para obter a área líquida.
  */
 export function calcularAreaBasesTanques(tanques: TanqueBacia[]): number {
-  return tanques.reduce((acc, t) => acc + areaBaseTanque(t.D_m), 0);
+  return tanques.reduce((acc, t) => acc + areaBaseTanque(t.D_m, t.diametroAnel_m), 0);
 }
 
 /**
