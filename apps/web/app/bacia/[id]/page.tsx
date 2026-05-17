@@ -62,9 +62,11 @@ function BaciaVisual({
   const baciX = PADDING_H;
   const baciY = PADDING_V + PADDING_TOP;
 
-  // Fontes adaptativas — proporcionais ao viewBox para evitar blur em SVGs escalados
-  const fSizeMain = Math.max(0.55, viewW * 0.016); // labels L×W
-  const fSizeCota = Math.max(0.32, viewW * 0.010); // cotas âmbar de distância
+  // Fontes adaptativas escaladas por viewH (dimensão constrangida pelo maxHeight: 520).
+  // Meta: ~26px para labels principais e ~15px para cotas, independente do nº de fileiras.
+  // Fórmula: fSize_m = viewH * % → ao dividir por escala (px/m=520/viewH) → px constante.
+  const fSizeMain = Math.max(0.8, viewH * 0.050); // ~5% de viewH ≈ 26px em qualquer layout
+  const fSizeCota = Math.max(0.4, viewH * 0.028); // ~2,8% de viewH ≈ 15px
 
   // Verificar status de distância de cada tanque
   const statusTanque = useMemo(() => {
@@ -199,6 +201,9 @@ function BaciaVisual({
         const isRow1 = pos.fileira === 1;
         const dMinMuro = distMinTanqueMuro(tanque.D_m);
 
+        // Distância real do shell direito do tanque até o muro direito [m]
+        const dAtualDireita = (L_m - pos.cx_m) - R;
+
         // Escolher qual tanque da fileira exibe a cota vertical (usa o 1º da fileira)
         const exibirCotaVertical = idxFileira === 0;
 
@@ -286,7 +291,7 @@ function BaciaVisual({
                 <text
                   x={(svgCx + R + baciX + L_m) / 2} y={svgCy - 0.18}
                   fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
-                  {distMinTanqueMuro(tanque.D_m).toFixed(2)}m
+                  {dAtualDireita.toFixed(2)}m
                 </text>
               </g>
             )}
