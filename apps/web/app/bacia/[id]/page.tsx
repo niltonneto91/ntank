@@ -147,24 +147,22 @@ function BaciaVisual({
       <rect x={baciX} y={baciY} width={L_m} height={W_m} fill="#f0fdf4" stroke="none" />
 
       {/* ─── Cota de comprimento (topo) ─── */}
-      <g stroke="#64748b">
-        <line x1={baciX} y1={baciY - 0.8} x2={baciX + L_m} y2={baciY - 0.8} strokeWidth="0.05"
-          markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
-        <text x={baciX + L_m / 2} y={baciY - 1.0} fontSize={fSizeMain} textAnchor="middle"
-          fontFamily="monospace" fontWeight="bold" fill="#334155">
-          {L_m.toFixed(1)} m
-        </text>
-      </g>
+      <line x1={baciX} y1={baciY - 0.8} x2={baciX + L_m} y2={baciY - 0.8}
+        stroke="#64748b" strokeWidth="0.05"
+        markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
+      <text x={baciX + L_m / 2} y={baciY - 1.0} fontSize={fSizeMain} textAnchor="middle"
+        fontFamily="monospace" fontWeight="bold" fill="#334155" stroke="none">
+        {L_m.toFixed(1)} m
+      </text>
       {/* ─── Cota de largura (esquerda) ─── */}
-      <g stroke="#64748b">
-        <line x1={baciX - 0.8} y1={baciY} x2={baciX - 0.8} y2={baciY + W_m} strokeWidth="0.05"
-          markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
-        <text x={baciX - 1.3} y={baciY + W_m / 2} fontSize={fSizeMain} textAnchor="middle"
-          fontFamily="monospace" fontWeight="bold" fill="#334155"
-          transform={`rotate(-90, ${baciX - 1.3}, ${baciY + W_m / 2})`}>
-          {W_m.toFixed(1)} m
-        </text>
-      </g>
+      <line x1={baciX - 0.8} y1={baciY} x2={baciX - 0.8} y2={baciY + W_m}
+        stroke="#64748b" strokeWidth="0.05"
+        markerStart="url(#seta-cinza-inv)" markerEnd="url(#seta-cinza)" />
+      <text x={baciX - 1.3} y={baciY + W_m / 2} fontSize={fSizeMain} textAnchor="middle"
+        fontFamily="monospace" fontWeight="bold" fill="#334155" stroke="none"
+        transform={`rotate(-90, ${baciX - 1.3}, ${baciY + W_m / 2})`}>
+        {W_m.toFixed(1)} m
+      </text>
 
       {/* ─── Tanques e cotas de distância ─── */}
       {posicoes.map((pos, idx) => {
@@ -248,7 +246,7 @@ function BaciaVisual({
                   strokeDasharray="0.18 0.08"
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text x={(baciX + svgCx - R) / 2} y={svgCy - 0.18}
-                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace" stroke="none">
                   {dMinMuro.toFixed(2)}m
                 </text>
               </g>
@@ -261,7 +259,7 @@ function BaciaVisual({
                   strokeDasharray="0.18 0.08"
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text x={svgCx + R * 0.3 + 0.15} y={(baciY + svgCy - R) / 2}
-                  fontSize={fSizeCota} textAnchor="start" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="start" fontFamily="monospace" stroke="none">
                   {dMinMuro.toFixed(2)}m
                 </text>
               </g>
@@ -274,7 +272,7 @@ function BaciaVisual({
                   strokeDasharray="0.18 0.08"
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text x={svgCx + R * 0.3 + 0.15} y={(svgCy + R + baciY + W_m) / 2}
-                  fontSize={fSizeCota} textAnchor="start" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="start" fontFamily="monospace" stroke="none">
                   {dMinMuro.toFixed(2)}m
                 </text>
               </g>
@@ -290,7 +288,7 @@ function BaciaVisual({
                   markerStart="url(#seta-inv)" markerEnd="url(#seta)" />
                 <text
                   x={(svgCx + R + baciX + L_m) / 2} y={svgCy - 0.18}
-                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace" stroke="none">
                   {dAtualDireita.toFixed(2)}m
                 </text>
               </g>
@@ -307,7 +305,7 @@ function BaciaVisual({
                 <text
                   x={(cotaEntreProximo.xIni + cotaEntreProximo.xFim) / 2}
                   y={cotaEntreProximo.yLinha - 0.18}
-                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace">
+                  fontSize={fSizeCota} textAnchor="middle" fontFamily="monospace" stroke="none">
                   {cotaEntreProximo.dMin.toFixed(2)}m
                 </text>
               </g>
