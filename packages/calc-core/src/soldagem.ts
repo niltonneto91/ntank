@@ -3,10 +3,14 @@
  *
  * Tipos de junta:
  *   Costado  → topo (butt weld):
- *     ≤ 8 mm  → chanfro reto (square groove)    abertura 2 mm
- *     ≥ 9 mm  → meio-V, bisel 37° da vertical   face raiz 2 mm, abertura 3 mm
+ *     ≤ 8 mm  → chanfro reto (square groove)    abertura 3 mm
+ *     ≥ 9 mm  → meio-V, bisel 37° da vertical   face raiz 2 mm, abertura 5 mm
  *   Fundo/Teto → filete sobreposto:
  *     a = max(3, 0,7 × t)  mm; A = 0,5 × a²
+ *
+ * Reforço duplo (externo + interno/back-weld):
+ *   h_r = t_menor / 3 por lado (triângulo isósceles)
+ *   t_menor = espessura da chapa mais fina (para juntas entre anéis diferentes)
  *
  * Consumíveis por processo:
  *   SMAW → eletrodo (efic. depósito 60%, sem gás)
@@ -47,31 +51,42 @@ const TAN_37 = Math.tan((37 * Math.PI) / 180); // ≈ 0,7536
 /**
  * Retorna a área da seção transversal do metal de solda (mm²) para 1 m de junta.
  *
- * Topo reto   (t ≤ 8 mm): raiz 2 mm + cap 1×(t+4)
- * Topo meio-V (t ≥ 9 mm): raiz 2×3 mm + triângulo + cap 1,5×(b+3)
- * Filete      (qualquer): a = max(3, 0,7t); A = 0,5a²
+ * Topo reto   (t ≤ 8 mm): sulco 3×t + reforço duplo (ext+int), h_r = t_menor/3
+ * Topo meio-V (t ≥ 9 mm): raiz 2×5 + triângulo + reforço duplo, h_r = t_menor/3
+ * Filete      (qualquer):  a = max(3, 0,7t); A = 0,5a²  — sem alteração
+ *
+ * @param t_menor_mm Espessura da chapa mais fina (para juntas entre anéis de espessuras
+ *   diferentes). Quando omitido, usa-se espessura_mm (junta entre chapas iguais).
  */
 function secaoTransversal(
   espessura_mm: number,
   tipo: "topo" | "filete",
+  t_menor_mm?: number,
 ): number {
   if (tipo === "filete") {
     const a = Math.max(3, 0.7 * espessura_mm);
     return 0.5 * a * a;
   }
+  const t_m = t_menor_mm ?? espessura_mm;  // espessura para cálculo do reforço
   if (espessura_mm <= 8) {
-    // Chanfro reto: área raiz (gap 2 mm × t) + cap (1 mm × (t+4 mm))
-    return 2 * espessura_mm + (espessura_mm + 4);
+    // Chanfro reto: sulco (gap 3 mm × t) + reforço duplo (triângulo, h_r = t_menor/3)
+    const g       = 3;                               // abertura de raiz (mm)
+    const h_r     = t_m / 3;                         // altura do reforço por lado
+    const A_sulco = g * espessura_mm;
+    const A_cap   = 0.5 * (g + 2 * h_r) * h_r;      // triângulo por lado
+    return A_sulco + 2 * A_cap;
   }
   // Meio-V bisel 37° da vertical
-  const rf = 2;              // face de raiz (mm)
-  const rg = 3;              // abertura de raiz (mm)
-  const h  = espessura_mm - rf;
-  const b  = h * TAN_37;    // largura do chanfro no topo (mm)
+  const rf        = 2;                               // face de raiz (mm)
+  const rg        = 5;                               // abertura de raiz (mm)
+  const h         = espessura_mm - rf;
+  const b         = h * TAN_37;                      // largura do chanfro no topo (mm)
+  const h_r       = t_m / 3;                         // altura do reforço por lado
   const A_raiz    = rf * rg;
   const A_chanfro = (h * b) / 2;
-  const A_cap     = 1.5 * (b + rg);
-  return A_raiz + A_chanfro + A_cap;
+  const A_cap_ext = 0.5 * (rg + b + 2 * h_r) * h_r; // externo (lado bevel)
+  const A_cap_int = 0.5 * (rg + 2 * h_r) * h_r;      // interno (back-weld)
+  return A_raiz + A_chanfro + A_cap_ext + A_cap_int;
 }
 
 /** Peso do metal de solda: A (mm²) × L (m) → kg. */
@@ -170,12 +185,18 @@ export function calcularSoldagem(
 
   // Juntas horizontais (circunferenciais) entre anéis adjacentes
   for (let i = 0; i < resultado.costado.aneis.length - 1; i++) {
-    const anel = resultado.costado.aneis[i]!;
-    const esp  = anel.chapaComercial.espessura; // anel inferior (mais grosso)
-    const tipo = esp >= 9 ? "topo-meio-v" : "topo-reto";
-    const A    = secaoTransversal(esp, "topo");
+    const anel      = resultado.costado.aneis[i]!;
+    const anel_next = resultado.costado.aneis[i + 1]!;
+    const esp       = anel.chapaComercial.espessura;       // anel inferior (mais grosso, controla tipo)
+    const esp_next  = anel_next.chapaComercial.espessura;  // anel superior (pode ser mais fino)
+    const t_menor   = Math.min(esp, esp_next);             // regula a altura do reforço
+    const tipo      = esp >= 9 ? "topo-meio-v" : "topo-reto";
+    const A         = secaoTransversal(esp, "topo", t_menor);
+    const descricao = t_menor < esp
+      ? `Junta circunferencial — anel ${i + 1} (${esp} mm) / anel ${i + 2} (${esp_next} mm) — t_menor = ${t_menor} mm`
+      : `Junta circunferencial — entre anel ${i + 1} e ${i + 2}`;
     juntasCostado.push({
-      descricao:      `Junta circunferencial — entre anel ${i + 1} e ${i + 2}`,
+      descricao,
       tipoJunta:      tipo,
       espessura_mm:   esp,
       comprimento_m:  Number(circ_m.toFixed(3)),
