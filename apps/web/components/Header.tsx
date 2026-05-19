@@ -61,8 +61,8 @@ export function Header() {
           <Logo size={36} />
         </Link>
 
-        {/* Nav calculadoras — scrollável no mobile */}
-        <nav className="flex flex-1 items-center gap-1 overflow-x-auto text-sm">
+        {/* Nav calculadoras — alinhada à direita, scrollável no mobile */}
+        <nav className="ml-auto flex items-center gap-1 overflow-x-auto text-sm">
           {CALCULADORAS.map((calc) => {
             const ativo = isAtivo(calc.prefixos, pathname);
             return (
@@ -80,15 +80,17 @@ export function Header() {
               </Link>
             );
           })}
-        </nav>
 
-        {/* Botão Novo — contexto-aware */}
-        <Link
-          href={novo.href}
-          className="shrink-0 rounded bg-carbono px-3 py-2 text-sm font-semibold text-verde transition hover:bg-carbono-700"
-        >
-          {novo.label}
-        </Link>
+          {/* Botão Novo — só aparece fora da home */}
+          {pathname !== "/" && (
+            <Link
+              href={novo.href}
+              className="ml-2 shrink-0 rounded bg-carbono px-3 py-2 text-sm font-semibold text-verde transition hover:bg-carbono-700"
+            >
+              {novo.label}
+            </Link>
+          )}
+        </nav>
       </div>
     </header>
   );
