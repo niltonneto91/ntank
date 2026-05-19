@@ -53,7 +53,7 @@ const TAN_37 = Math.tan((37 * Math.PI) / 180); // ≈ 0,7536
  *
  * Topo reto   (t ≤ 8 mm): sulco 3×t + reforço duplo (ext+int), h_r = t_menor/3
  * Topo meio-V (t ≥ 9 mm): raiz 2×5 + triângulo + reforço duplo, h_r = t_menor/3
- * Filete      (qualquer):  a = max(3, 0,7t); A = 0,5a²  — sem alteração
+ * Filete      (qualquer):  a = max(3, t); A = 0,5a²  (perna = espessura da chapa)
  *
  * @param t_menor_mm Espessura da chapa mais fina (para juntas entre anéis de espessuras
  *   diferentes). Quando omitido, usa-se espessura_mm (junta entre chapas iguais).
@@ -64,7 +64,8 @@ function secaoTransversal(
   t_menor_mm?: number,
 ): number {
   if (tipo === "filete") {
-    const a = Math.max(3, 0.7 * espessura_mm);
+    // Perna do filete = espessura da chapa (triângulo isósceles); mínimo 3 mm
+    const a = Math.max(3, espessura_mm);
     return 0.5 * a * a;
   }
   const t_m = t_menor_mm ?? espessura_mm;  // espessura para cálculo do reforço
